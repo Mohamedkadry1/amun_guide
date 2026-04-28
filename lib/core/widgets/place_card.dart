@@ -57,11 +57,35 @@ class PlaceCard extends StatelessWidget {
                 const BorderRadius.vertical(top: Radius.circular(16)),
                 child: SizedBox(
                   height: 120, width: double.infinity,
-                  child: Image.asset(image, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                          color: AppColors.bgInput,
-                          child: const Icon(Icons.image,
-                              color: Colors.white24, size: 40))),
+                  child: Image.network(
+                    image,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: 120,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        color: AppColors.bgInput,
+                        child: const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.gold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => Container(
+                      color: AppColors.bgInput,
+                      child: const Icon(Icons.image,
+                          color: Colors.white24, size: 40),
+                    ),
+                  ),
                 ),
               ),
               // Save button
@@ -163,11 +187,35 @@ class PlaceCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: SizedBox(
               width: 90, height: 90,
-              child: Image.asset(image, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                      color: AppColors.bgInput,
-                      child: const Icon(Icons.image,
-                          color: Colors.white24, size: 32))),
+              child: Image.network(
+                image,
+                fit: BoxFit.cover,
+                width: 90,
+                height: 90,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    color: AppColors.bgInput,
+                    child: const Center(
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.gold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (_, __, ___) => Container(
+                  color: AppColors.bgInput,
+                  child: const Icon(Icons.image,
+                      color: Colors.white24, size: 32),
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 12),

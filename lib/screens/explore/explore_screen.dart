@@ -1,11 +1,14 @@
 // 📁 lib/screens/explore/explore_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_assets.dart';
 import '../../core/widgets/amun_filter_chip.dart';
 import '../../core/widgets/place_card.dart';
 import '../../core/widgets/section_header.dart';
+import '../../features/places/providers/place_provider.dart';
+import '../../features/places/models/place_models.dart';
+import 'place_details_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -18,23 +21,30 @@ class _ExploreScreenState extends State<ExploreScreen> {
   int _activeFilter = 0;
   bool _isGrid = true;
   final _searchController = TextEditingController();
-
-  final _filters = ['All', 'Temples', 'Deserts', 'Nile', 'Beaches', 'Museums'];
-
-  final _places = [
-    {'img': AppAssets.pyramids,   'name': 'Giza Pyramids',   'loc': 'Cairo, Egypt',      'rating': '4.9', 'price': '\$150/pax', 'cat': 'Temples'},
-    {'img': AppAssets.karnak,     'name': 'Karnak Temple',   'loc': 'Luxor, Egypt',      'rating': '4.8', 'price': '\$250/pax', 'cat': 'Temples'},
-    {'img': AppAssets.abuSimbel,  'name': 'Abu Simbel',      'loc': 'Aswan, Egypt',      'rating': '4.8', 'price': '\$200/pax', 'cat': 'Temples'},
-    {'img': AppAssets.siwa,       'name': 'Siwa Oasis',      'loc': 'Siwa, Egypt',       'rating': '4.7', 'price': '\$180/pax', 'cat': 'Deserts'},
-    {'img': AppAssets.nileSunset, 'name': 'Nile Cruise',     'loc': 'Luxor → Aswan',    'rating': '4.9', 'price': '\$350/pax', 'cat': 'Nile'},
-    {'img': AppAssets.alexandria, 'name': 'Alexandria',      'loc': 'Alexandria, Egypt', 'rating': '4.6', 'price': '\$120/pax', 'cat': 'Beaches'},
-    {'img': AppAssets.museum,     'name': 'Egyptian Museum', 'loc': 'Cairo, Egypt',      'rating': '4.7', 'price': '\$80/pax',  'cat': 'Museums'},
-    {'img': AppAssets.valley,     'name': 'Valley of Kings', 'loc': 'Luxor, Egypt',      'rating': '4.8', 'price': '\$160/pax', 'cat': 'Temples'},
+  final List<String> _filters = [
+    'All',
+    'Temples',
+    'Museums',
+    'Nature',
+    'Culture',
+    'Historical'
   ];
 
-  List<Map<String, dynamic>> get _filtered => _activeFilter == 0
-      ? _places
-      : _places.where((p) => p['cat'] == _filters[_activeFilter]).toList();
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<PlaceProvider>(context, listen: false);
+      provider.loadPlaces();
+    });
+  }
+
+  void _onSearchChanged() {
+    final provider = Provider.of<PlaceProvider>(context, listen: false);
+    final query = _searchController.text;
+    provider.loadPlaces(search: query.isNotEmpty ? query : null);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,14 +124,25 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   children: List.generate(_filters.length, (i) => AmunFilterChip(
                     label: _filters[i],
                     isActive: _activeFilter == i,
-                    onTap: () => setState(() => _activeFilter = i),
+                    onTap: () {
+                      setState(() => _activeFilter = i);
+                      final provider = Provider.of<PlaceProvider>(context, listen: false);
+                      final query = _searchController.text;
+                      final categoryId = i == 0 ? 0 : i;
+                      provider.loadPlaces(search: query, categoryId: categoryId);
+                    },
                   )),
                 ),
               ),
 
               const SizedBox(height: 14),
 
-              SectionHeader(title: '${_filtered.length} Places Found'),
+              Consumer<PlaceProvider>(
+                builder: (_, provider, __) {
+                  final count = provider.places.length;
+                  return SectionHeader(title: '$count Places Found');
+                },
+              ),
             ]),
           ),
 
@@ -129,43 +150,77 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
           // ─── Results ────────────────────────────
           Expanded(
-            child: _isGrid
-                ? GridView.builder(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.78,
-              ),
-              itemCount: _filtered.length,
-              itemBuilder: (_, i) => PlaceCard(
-                image: _filtered[i]['img'],
-                name: _filtered[i]['name'],
-                location: _filtered[i]['loc'],
-                rating: _filtered[i]['rating'],
-                price: _filtered[i]['price'],
-                category: _filtered[i]['cat'],
-                style: PlaceCardStyle.grid,
-                onTap: () => Navigator.pushNamed(context, '/place-details'),
-                onSave: () {},
-              ),
-            )
-                : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              itemCount: _filtered.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (_, i) => PlaceCard(
-                image: _filtered[i]['img'],
-                name: _filtered[i]['name'],
-                location: _filtered[i]['loc'],
-                rating: _filtered[i]['rating'],
-                price: _filtered[i]['price'],
-                category: _filtered[i]['cat'],
-                style: PlaceCardStyle.list,
-                onTap: () => Navigator.pushNamed(context, '/place-details'),
-                onSave: () {},
-              ),
+            child: Consumer<PlaceProvider>(
+              builder: (_, provider, __) {
+                if (provider.isLoading && provider.places.isEmpty) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  );
+                }
+
+                // Use mock data if API fails or is empty
+                final places = provider.places.isNotEmpty 
+                    ? provider.places 
+                    : _getMockPlaces();
+
+                if (places.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No places found',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  );
+                }
+
+                return _isGrid
+                    ? GridView.builder(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                        childAspectRatio: 0.78,
+                      ),
+                      itemCount: places.length,
+                      itemBuilder: (_, i) => PlaceCard(
+                        image: places[i].imageUrl,
+                        name: places[i].name,
+                        location: places[i].location,
+                        rating: places[i].rating.toString(),
+                        price: '\$${places[i].price}/pax',
+                        category: 'Temples',
+                        style: PlaceCardStyle.grid,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PlaceDetailsScreen(placeId: places[i].id),
+                          ),
+                        ),
+                        onSave: () => provider.addToFavorites(places[i].id),
+                      ),
+                    )
+                    : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                      itemCount: places.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (_, i) => PlaceCard(
+                        image: places[i].imageUrl,
+                        name: places[i].name,
+                        location: places[i].location,
+                        rating: places[i].rating.toString(),
+                        price: '\$${places[i].price}/pax',
+                        category: 'Temples',
+                        style: PlaceCardStyle.list,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PlaceDetailsScreen(placeId: places[i].id),
+                          ),
+                        ),
+                        onSave: () => provider.addToFavorites(places[i].id),
+                      ),
+                    );
+              },
             ),
           ),
         ]),
@@ -186,5 +241,73 @@ class _ExploreScreenState extends State<ExploreScreen> {
         child: Icon(icon, color: active ? Colors.black : Colors.white38, size: 18),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// Provide mock places data when API fails
+  List<Place> _getMockPlaces() {
+    return [
+      Place(
+        id: 1,
+        name: 'Great Pyramids',
+        location: 'Giza',
+        description: 'The most iconic landmarks in Egypt',
+        imageUrl: 'https://via.placeholder.com/400x300?text=Great+Pyramids',
+        rating: 4.8,
+        price: 50,
+        reviewsCount: 328,
+        latitude: 29.9792,
+        longitude: 31.1342,
+        categoryId: 1,
+        createdAt: DateTime.now(),
+      ),
+      Place(
+        id: 2,
+        name: 'Egyptian Museum',
+        location: 'Cairo',
+        description: 'World-class collection of ancient artifacts',
+        imageUrl: 'https://via.placeholder.com/400x300?text=Museum',
+        rating: 4.6,
+        price: 30,
+        reviewsCount: 256,
+        latitude: 30.0454,
+        longitude: 31.2357,
+        categoryId: 2,
+        createdAt: DateTime.now(),
+      ),
+      Place(
+        id: 3,
+        name: 'Karnak Temple',
+        location: 'Luxor',
+        description: 'Ancient temple complex with stunning architecture',
+        imageUrl: 'https://via.placeholder.com/400x300?text=Karnak+Temple',
+        rating: 4.7,
+        price: 40,
+        reviewsCount: 412,
+        latitude: 25.7176,
+        longitude: 32.6563,
+        categoryId: 1,
+        createdAt: DateTime.now(),
+      ),
+      Place(
+        id: 4,
+        name: 'Valley of Kings',
+        location: 'Luxor',
+        description: 'Royal burial ground with magnificent tombs',
+        imageUrl: 'https://via.placeholder.com/400x300?text=Valley+of+Kings',
+        rating: 4.9,
+        price: 45,
+        reviewsCount: 501,
+        latitude: 25.7404,
+        longitude: 32.6011,
+        categoryId: 1,
+        createdAt: DateTime.now(),
+      ),
+    ];
   }
 }

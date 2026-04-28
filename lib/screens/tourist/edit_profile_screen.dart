@@ -18,7 +18,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _name    = TextEditingController(text: 'Sarah Ahmed');
   final _email   = TextEditingController(text: 'sarah.ahmed@email.com');
   final _phone   = TextEditingController(text: '+20 100 123 4567');
-  String _country = 'Egypt';
+  final String _country = 'Egypt';
 
   @override
   Widget build(BuildContext context) {

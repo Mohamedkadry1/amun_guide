@@ -19,7 +19,9 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.2
+  # Relaxed to support local Dart SDK 3.5.3 used in this environment.
+  # If you use a newer Flutter/Dart SDK (>=3.9.2) restore the original constraint.
+  sdk: '>=3.5.3 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -34,6 +36,24 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+
+  # HTTP & API
+  http: ^1.1.0
+  
+  # Secure Storage
+  flutter_secure_storage: ^9.0.0
+  
+  # State Management
+  provider: ^6.0.0
+  
+  # SharedPreferences for caching
+  shared_preferences: ^2.2.2
+  
+  # Image Picker
+  image_picker: ^1.0.0
+  
+  # Dio (alternative HTTP client with interceptors)
+  dio: ^5.4.0
 
 dev_dependencies:
   flutter_test:

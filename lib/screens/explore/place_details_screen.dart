@@ -1,11 +1,15 @@
 // 📁 lib/screens/explore/place_details_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_text_styles.dart';
+import '../../features/places/providers/place_provider.dart';
+import '../../features/places/models/place_models.dart';
 
 class PlaceDetailsScreen extends StatefulWidget {
-  const PlaceDetailsScreen({super.key});
+  final int? placeId;
+  
+  const PlaceDetailsScreen({super.key, this.placeId});
 
   @override
   State<PlaceDetailsScreen> createState() => _PlaceDetailsScreenState();
@@ -16,83 +20,395 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
   bool _isExpanded = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.placeId != null) {
+        Provider.of<PlaceProvider>(context, listen: false).loadPlaceDetails(widget.placeId!);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A1208),
-      body: Stack(
-        children: [
-          CustomScrollView(
-            slivers: [
-              // ── Hero Image ──────────────────────────────────
-              SliverAppBar(
-                expandedHeight: 300,
-                pinned: true,
-                backgroundColor: const Color(0xFF1A1208),
-                elevation: 0,
-                // زرار الرجوع
-                leading: GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    margin: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: Colors.black54,
-                      shape: BoxShape.circle,
+    return Consumer<PlaceProvider>(
+      builder: (_, provider, __) {
+        final place = provider.selectedPlace ?? _getMockPlace();
+        
+        if (provider.isLoading && provider.selectedPlace == null) {
+          return Scaffold(
+            backgroundColor: const Color(0xFF1A1208),
+            body: const Center(child: CircularProgressIndicator(color: Colors.white)),
+          );
+        }
+
+        if (place == null) {
+          return Scaffold(
+            backgroundColor: const Color(0xFF1A1208),
+            appBar: AppBar(backgroundColor: const Color(0xFF1A1208)),
+            body: const Center(
+              child: Text('Place not found', style: TextStyle(color: Colors.white)),
+            ),
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: const Color(0xFF1A1208),
+          body: Stack(
+            children: [
+              CustomScrollView(
+                slivers: [
+                  // ── Hero Image ──────────────────────────────────
+                  SliverAppBar(
+                    expandedHeight: 300,
+                    pinned: true,
+                    backgroundColor: const Color(0xFF1A1208),
+                    elevation: 0,
+                    leading: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        margin: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.arrow_back, color: Colors.white),
+                      ),
                     ),
-                    child: const Icon(Icons.arrow_back, color: Colors.white),
-                  ),
-                ),
-                // أزرار share و bookmark
-                actions: [
-                  GestureDetector(
-                    onTap: () {},
-                    child: Container(
-                      margin: const EdgeInsets.all(8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Colors.black54,
-                        shape: BoxShape.circle,
+                    actions: [
+                      GestureDetector(
+                        onTap: () {},
+                        child: Container(
+                          margin: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.share_outlined, color: Colors.white, size: 20),
+                        ),
                       ),
-                      child: const Icon(Icons.share_outlined, color: Colors.white, size: 20),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() => _isSaved = !_isSaved);
+                          if (!_isSaved) {
+                            provider.addToFavorites(place.id);
+                          } else {
+                            provider.removeFromFavorites(place.id);
+                          }
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _isSaved ? Icons.bookmark : Icons.bookmark_outline,
+                            color: _isSaved ? AppColors.gold : Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            place.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: const Color(0xFF2A1F0E),
+                              child: const Icon(Icons.image, color: Colors.white24, size: 80),
+                            ),
+                          ),
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Color(0xFF1A1208)],
+                                stops: [0.5, 1.0],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () => setState(() => _isSaved = !_isSaved),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Colors.black54,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _isSaved ? Icons.bookmark : Icons.bookmark_outline,
-                        color: _isSaved ? AppColors.gold : Colors.white,
-                        size: 20,
-                      ),
+
+                  // ── Content ─────────────────────────────────────
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+
+                        // ── الاسم والموقع والتقييم ──────────────
+                        Text(
+                          place.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // الموقع والنوع
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on, color: AppColors.gold, size: 16),
+                            const SizedBox(width: 4),
+                            Text(place.location, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                            const SizedBox(width: 8),
+                            const Text('•', style: TextStyle(color: Colors.white24)),
+                            const SizedBox(width: 8),
+                            const Text('Historical Site', style: TextStyle(color: Colors.white54, fontSize: 13)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // التقييم بالنجوم
+                        Row(
+                          children: [
+                            Row(
+                              children: List.generate(5, (i) => Icon(
+                                i < place.rating.toInt() ? Icons.star : Icons.star_half,
+                                color: AppColors.gold,
+                                size: 18,
+                              )),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              place.rating.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '(${place.reviewsCount} reviews)',
+                              style: const TextStyle(color: Colors.white38, fontSize: 13),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // ── Amun AI Insight ─────────────────────
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF221A0A),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.gold.withOpacity(0.35)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.gold.withOpacity(0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.auto_awesome, color: AppColors.gold, size: 16),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Amun AI Insight',
+                                    style: TextStyle(
+                                      color: AppColors.gold,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              RichText(
+                                text: const TextSpan(
+                                  style: TextStyle(fontSize: 15, height: 1.4),
+                                  children: [
+                                    TextSpan(
+                                      text: 'Best time to visit: ',
+                                      style: TextStyle(color: Colors.white70),
+                                    ),
+                                    TextSpan(
+                                      text: '8:00 AM',
+                                      style: TextStyle(
+                                        color: AppColors.gold,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Early morning offers the best lighting for photos and avoids the midday heat and largest crowds.',
+                                style: TextStyle(color: Colors.white38, fontSize: 13, height: 1.5),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // ── About ───────────────────────────────
+                        const Text(
+                          'About',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          place.description,
+                          style: const TextStyle(color: Colors.white54, fontSize: 14, height: 1.7),
+                          maxLines: _isExpanded ? null : 4,
+                          overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () => setState(() => _isExpanded = !_isExpanded),
+                          child: Row(
+                            children: [
+                              Text(
+                                _isExpanded ? 'Show less' : 'Read more',
+                                style: const TextStyle(
+                                  color: AppColors.gold,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                _isExpanded ? Icons.arrow_upward : Icons.arrow_forward,
+                                color: AppColors.gold,
+                                size: 14,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // ── Gallery ─────────────────────────────
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Gallery',
+                              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            GestureDetector(
+                              onTap: () {},
+                              child: const Text(
+                                'View All',
+                                style: TextStyle(color: AppColors.gold, fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 130,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: provider.selectedPlaceImages.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 10),
+                            itemBuilder: (_, i) {
+                              final img = provider.selectedPlaceImages[i];
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: SizedBox(
+                                  width: 160,
+                                  height: 130,
+                                  child: Image.network(
+                                    img.url,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      color: const Color(0xFF2A1F0E),
+                                      child: const Icon(Icons.image, color: Colors.white24),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // ── Reviews ─────────────────────────────
+                        _buildReviewsSection(place),
+
+                        const SizedBox(height: 24),
+
+                        // ── Nearby Attractions ──────────────────
+                        const Text(
+                          'Nearby Attractions',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 14),
+                        const SizedBox(height: 160),
+                      ]),
                     ),
                   ),
                 ],
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Stack(
-                    fit: StackFit.expand,
+              ),
+
+              // ── Bottom Bar ────────────────────────────────────
+              Positioned(
+                bottom: 0, left: 0, right: 0,
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(
+                    20, 14, 20, MediaQuery.of(context).padding.bottom + 14,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1A1208),
+                    border: Border(top: BorderSide(color: Colors.white10)),
+                  ),
+                  child: Row(
                     children: [
-                      // صورة المكان
-                      Image.asset(
-                        'assets/images/karnak.jpg',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: const Color(0xFF2A1F0E),
-                          child: const Icon(Icons.image, color: Colors.white24, size: 80),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pushNamed(context, '/ai-chat'),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: AppColors.gold.withOpacity(0.5)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                          ),
+                          child: const Text(
+                            'Ask AI',
+                            style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
-                      // gradient في الأسفل
-                      const DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Color(0xFF1A1208)],
-                            stops: [0.5, 1.0],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pushNamed(context, '/tour-details'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.gold,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Add to Plan',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
                         ),
                       ),
@@ -100,321 +416,15 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                   ),
                 ),
               ),
-
-              // ── Content ─────────────────────────────────────
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-
-                    // ── الاسم والموقع والتقييم ──────────────
-                    const Text(
-                      'Karnak Temple Complex',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // الموقع والنوع
-                    Row(
-                      children: const [
-                        Icon(Icons.location_on, color: AppColors.gold, size: 16),
-                        SizedBox(width: 4),
-                        Text('Luxor, Egypt', style: TextStyle(color: Colors.white54, fontSize: 13)),
-                        SizedBox(width: 8),
-                        Text('•', style: TextStyle(color: Colors.white24)),
-                        SizedBox(width: 8),
-                        Text('Historical Site', style: TextStyle(color: Colors.white54, fontSize: 13)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // التقييم بالنجوم
-                    Row(
-                      children: [
-                        // نجوم
-                        Row(
-                          children: List.generate(5, (i) => Icon(
-                            i < 4 ? Icons.star : Icons.star_half,
-                            color: AppColors.gold,
-                            size: 18,
-                          )),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          '4.8',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          '(3,420 reviews)',
-                          style: TextStyle(color: Colors.white38, fontSize: 13),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // ── Amun AI Insight ─────────────────────
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF221A0A),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.gold.withOpacity(0.35)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.gold.withOpacity(0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.auto_awesome, color: AppColors.gold, size: 16),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Amun AI Insight',
-                                style: TextStyle(
-                                  color: AppColors.gold,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          // Best time
-                          RichText(
-                            text: const TextSpan(
-                              style: TextStyle(fontSize: 15, height: 1.4),
-                              children: [
-                                TextSpan(
-                                  text: 'Best time to visit:',
-                                  style: TextStyle(color: Colors.white70),
-                                ),
-                                TextSpan(
-                                  text: '8:00 AM',
-                                  style: TextStyle(
-                                    color: AppColors.gold,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'Early morning offers the best lighting for photos and avoids the midday heat and largest crowds.',
-                            style: TextStyle(color: Colors.white38, fontSize: 13, height: 1.5),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // ── About ───────────────────────────────
-                    const Text(
-                      'About',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'The Karnak Temple Complex, commonly known as Karnak, comprises a vast mix of decayed temples, chapels, pylons, and other buildings near Luxor, Egypt. Construction at the complex began during the reign of Senusret I in the Middle Kingdom and continued into the Ptolemaic period.',
-                      style: const TextStyle(color: Colors.white54, fontSize: 14, height: 1.7),
-                      maxLines: _isExpanded ? null : 4,
-                      overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () => setState(() => _isExpanded = !_isExpanded),
-                      child: Row(
-                        children: [
-                          Text(
-                            _isExpanded ? 'Show less' : 'Read more',
-                            style: const TextStyle(
-                              color: AppColors.gold,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            _isExpanded ? Icons.arrow_upward : Icons.arrow_forward,
-                            color: AppColors.gold,
-                            size: 14,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // ── Gallery ─────────────────────────────
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Gallery',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        GestureDetector(
-                          onTap: () {},
-                          child: const Text(
-                            'View All',
-                            style: TextStyle(color: AppColors.gold, fontSize: 13),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 130,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: 4,
-                        separatorBuilder: (_, __) => const SizedBox(width: 10),
-                        itemBuilder: (_, i) {
-                          final imgs = [
-                            'assets/images/karnak.jpg',
-                            'assets/images/nile_sunset.jpg',
-                            'assets/images/luxor_night.jpg',
-                            'assets/images/valley.jpg',
-                          ];
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: SizedBox(
-                              width: 160,
-                              height: 130,
-                              child: Image.asset(
-                                imgs[i],
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: const Color(0xFF2A1F0E),
-                                  child: const Icon(Icons.image, color: Colors.white24),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // ── Reviews ─────────────────────────────
-                    _buildReviewsSection(),
-
-                    const SizedBox(height: 24),
-
-                    // ── Nearby Attractions ──────────────────
-                    const Text(
-                      'Nearby Attractions',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      height: 160,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: 3,
-                        separatorBuilder: (_, __) => const SizedBox(width: 12),
-                        itemBuilder: (_, i) {
-                          final nearby = [
-                            {'img': 'assets/images/luxor_museum.jpg', 'name': 'Luxor Museum', 'dist': '2.5 km away', 'rating': '4.6'},
-                            {'img': 'assets/images/colossi.jpg',      'name': 'Colossi of Memnon', 'dist': '4.1 km away', 'rating': '4.5'},
-                            {'img': 'assets/images/valley.jpg',       'name': 'Valley of Kings', 'dist': '8.3 km away', 'rating': '4.8'},
-                          ];
-                          return _buildNearbyCard(
-                            img: nearby[i]['img']!,
-                            name: nearby[i]['name']!,
-                            dist: nearby[i]['dist']!,
-                            rating: nearby[i]['rating']!,
-                          );
-                        },
-                      ),
-                    ),
-                  ]),
-                ),
-              ),
             ],
           ),
-
-          // ── Bottom Bar ────────────────────────────────────
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: Container(
-              padding: EdgeInsets.fromLTRB(
-                20, 14, 20, MediaQuery.of(context).padding.bottom + 14,
-              ),
-              decoration: const BoxDecoration(
-                color: Color(0xFF1A1208),
-                border: Border(top: BorderSide(color: Colors.white10)),
-              ),
-              child: Row(
-                children: [
-                  // Ask AI
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pushNamed(context, '/ai-chat'),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.gold.withOpacity(0.5)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                      ),
-                      child: const Text(
-                        'Ask AI',
-                        style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Add to Plan
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pushNamed(context, '/tour-details'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.gold,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Add to Plan',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   // ── Reviews Section ────────────────────────────────────
-  Widget _buildReviewsSection() {
+  Widget _buildReviewsSection(place) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -435,9 +445,9 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
               // الرقم الكبير
               Column(
                 children: [
-                  const Text(
-                    '4.8',
-                    style: TextStyle(
+                  Text(
+                    place.rating.toString(),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 42,
                       fontWeight: FontWeight.bold,
@@ -445,15 +455,15 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                   ),
                   Row(
                     children: List.generate(5, (i) => Icon(
-                      i < 4 ? Icons.star : Icons.star_half,
+                      i < place.rating.toInt() ? Icons.star : Icons.star_half,
                       color: AppColors.gold,
                       size: 14,
                     )),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    '3,420 reviews',
-                    style: TextStyle(color: Colors.white38, fontSize: 11),
+                  Text(
+                    '${place.reviewsCount} reviews',
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
                   ),
                 ],
               ),
@@ -512,7 +522,7 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
               child: SizedBox(
                 width: 150,
                 height: 105,
-                child: Image.asset(
+                child: Image.network(
                   img,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
@@ -541,6 +551,24 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Provide mock place data when API fails
+  Place _getMockPlace() {
+    return Place(
+      id: 1,
+      name: 'Great Pyramids of Giza',
+      location: 'Giza, Egypt',
+      description: 'The Great Pyramids are the most iconic landmarks in Egypt and among the Seven Wonders of the Ancient World. Built during the Old Kingdom period, these magnificent structures served as elaborate tombs for Pharaohs.',
+      imageUrl: 'https://via.placeholder.com/600x400?text=Great+Pyramids',
+      rating: 4.8,
+      price: 50,
+      reviewsCount: 1250,
+      latitude: 29.9792,
+      longitude: 31.1342,
+      categoryId: 1,
+      createdAt: DateTime.now(),
     );
   }
 }
