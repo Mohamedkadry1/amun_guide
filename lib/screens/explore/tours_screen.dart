@@ -27,12 +27,7 @@ class _ToursScreenState extends State<ToursScreen> {
     'Beach'
   ];
 
-  final List<String> _difficulties = [
-    'All Levels',
-    'Easy',
-    'Moderate',
-    'Hard'
-  ];
+  final List<String> _difficulties = ['All Levels', 'Easy', 'Moderate', 'Hard'];
 
   @override
   void initState() {
@@ -50,10 +45,12 @@ class _ToursScreenState extends State<ToursScreen> {
 
   void _onSearchChanged(String query) {
     final provider = context.read<TourProvider>();
-    final categoryFilter = _activeCategory == 0 ? null : _categories[_activeCategory];
-    final difficultyFilter =
-        _activeDifficulty == 0 ? null : _difficulties[_activeDifficulty].toLowerCase();
-    
+    final categoryFilter =
+        _activeCategory == 0 ? null : _categories[_activeCategory];
+    final difficultyFilter = _activeDifficulty == 0
+        ? null
+        : _difficulties[_activeDifficulty].toLowerCase();
+
     provider.loadTours(
       category: categoryFilter,
       difficulty: difficultyFilter,
@@ -86,10 +83,12 @@ class _ToursScreenState extends State<ToursScreen> {
 
   void _applyFilters() {
     final provider = context.read<TourProvider>();
-    final categoryFilter = _activeCategory == 0 ? null : _categories[_activeCategory];
-    final difficultyFilter =
-        _activeDifficulty == 0 ? null : _difficulties[_activeDifficulty].toLowerCase();
-    
+    final categoryFilter =
+        _activeCategory == 0 ? null : _categories[_activeCategory];
+    final difficultyFilter = _activeDifficulty == 0
+        ? null
+        : _difficulties[_activeDifficulty].toLowerCase();
+
     provider.loadTours(
       category: categoryFilter,
       difficulty: difficultyFilter,
@@ -97,6 +96,14 @@ class _ToursScreenState extends State<ToursScreen> {
       maxPrice: _priceRange.end,
       search: _searchController.text.isEmpty ? null : _searchController.text,
     );
+  }
+
+  /// Get image provider based on URL type (asset or network)
+  ImageProvider _getImageProvider(String imageUrl) {
+    if (imageUrl.startsWith('assets/')) {
+      return AssetImage(imageUrl);
+    }
+    return NetworkImage(imageUrl);
   }
 
   @override
@@ -133,11 +140,13 @@ class _ToursScreenState extends State<ToursScreen> {
                     onChanged: _onSearchChanged,
                     decoration: InputDecoration(
                       hintText: 'Search tours...',
-                      prefixIcon: const Icon(Icons.search, color: AppColors.gold),
+                      prefixIcon:
+                          const Icon(Icons.search, color: AppColors.gold),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                     ),
                   ),
                 ),
@@ -154,7 +163,8 @@ class _ToursScreenState extends State<ToursScreen> {
                         onTap: () => _onCategoryChanged(i),
                         child: Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
                             color: _activeCategory == i
                                 ? AppColors.gold
@@ -259,10 +269,12 @@ class _ToursScreenState extends State<ToursScreen> {
                 // Tours List/Grid
                 Builder(
                   builder: (context) {
-                    final List<Tour> tours = tourProvider.tours.isNotEmpty 
-                        ? tourProvider.tours 
-                        : (tourProvider.errorMessage != null ? _getMockTours() : []);
-                    
+                    final List<Tour> tours = tourProvider.tours.isNotEmpty
+                        ? tourProvider.tours
+                        : (tourProvider.errorMessage != null
+                            ? _getMockTours()
+                            : []);
+
                     if (tourProvider.isLoading && tourProvider.tours.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.all(16),
@@ -271,12 +283,13 @@ class _ToursScreenState extends State<ToursScreen> {
                     } else if (tours.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.all(16),
-                        child: Text('No tours found', style: TextStyle(color: Colors.white)),
+                        child: Text('No tours found',
+                            style: TextStyle(color: Colors.white)),
                       );
                     } else {
-                      return _isGridView 
-                        ? _buildGridView(tours) 
-                        : _buildListView(tours);
+                      return _isGridView
+                          ? _buildGridView(tours)
+                          : _buildListView(tours);
                     }
                   },
                 ),
@@ -295,14 +308,14 @@ class _ToursScreenState extends State<ToursScreen> {
                             : _difficulties[_activeDifficulty].toLowerCase();
 
                         context.read<TourProvider>().loadMoreTours(
-                          category: categoryFilter,
-                          difficulty: difficultyFilter,
-                          minPrice: _priceRange.start,
-                          maxPrice: _priceRange.end,
-                          search: _searchController.text.isEmpty
-                              ? null
-                              : _searchController.text,
-                        );
+                              category: categoryFilter,
+                              difficulty: difficultyFilter,
+                              minPrice: _priceRange.start,
+                              maxPrice: _priceRange.end,
+                              search: _searchController.text.isEmpty
+                                  ? null
+                                  : _searchController.text,
+                            );
                       },
                       child: tourProvider.isLoading
                           ? const SizedBox(
@@ -366,99 +379,103 @@ class _ToursScreenState extends State<ToursScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            // Image
-            Stack(
-              children: [
-                Container(
-                  height: 150,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800],
-                    image: DecorationImage(
-                      image: NetworkImage(tour.imageUrl),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
+              // Image
+              Stack(
+                children: [
+                  Container(
+                    height: 150,
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      tour.isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: AppColors.gold,
-                      size: 18,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            // Info
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tour.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                      color: Colors.grey[800],
+                      image: DecorationImage(
+                        image: _getImageProvider(tour.imageUrl),
+                        fit: BoxFit.cover,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, color: AppColors.gold, size: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${tour.rating} (${tour.reviewsCount})',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      ],
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        tour.isFavorite
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: AppColors.gold,
+                        size: 18,
+                      ),
                     ),
-                    const Spacer(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '\$${tour.price.toInt()}',
-                          style: const TextStyle(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
+                  ),
+                ],
+              ),
+              // Info
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tour.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.gold.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(4),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.star,
+                              color: AppColors.gold, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${tour.rating} (${tour.reviewsCount})',
+                            style: const TextStyle(fontSize: 11),
                           ),
-                          child: Text(
-                            '${tour.duration}d',
+                        ],
+                      ),
+                      const Spacer(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '\$${tour.price.toInt()}',
                             style: const TextStyle(
                               color: AppColors.gold,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.gold.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '${tour.duration}d',
+                              style: const TextStyle(
+                                color: AppColors.gold,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
-            ),
+            ],
+          ),
         ),
       ),
     );
@@ -487,7 +504,7 @@ class _ToursScreenState extends State<ToursScreen> {
                 borderRadius: BorderRadius.circular(8),
                 color: Colors.grey[800],
                 image: DecorationImage(
-                  image: NetworkImage(tour.imageUrl),
+                  image: _getImageProvider(tour.imageUrl),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -514,7 +531,8 @@ class _ToursScreenState extends State<ToursScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.star, color: AppColors.gold, size: 14),
+                          const Icon(Icons.star,
+                              color: AppColors.gold, size: 14),
                           const SizedBox(width: 4),
                           Text(
                             '${tour.rating}',
@@ -544,7 +562,9 @@ class _ToursScreenState extends State<ToursScreen> {
                         ),
                       ),
                       Icon(
-                        tour.isFavorite ? Icons.favorite : Icons.favorite_border,
+                        tour.isFavorite
+                            ? Icons.favorite
+                            : Icons.favorite_border,
                         color: AppColors.gold,
                         size: 20,
                       ),
@@ -564,14 +584,15 @@ class _ToursScreenState extends State<ToursScreen> {
     return [
       Tour(
         id: 1,
-        name: 'Luxor Day Tour',
-        description: 'Explore the ancient temples of Luxor in one day',
+        name: 'Luxor Temples Tour',
+        description:
+            'Explore the magnificent ancient temples of Luxor including Karnak and Luxor Temple',
         startDate: DateTime.now(),
         endDate: DateTime.now().add(const Duration(days: 1)),
         price: 120,
         rating: 4.8,
         reviewsCount: 245,
-        imageUrl: 'https://via.placeholder.com/400x300?text=Luxor+Tour',
+        imageUrl: 'assets/images/karnak.jpg',
         imageGallery: [],
         itinerary: [],
         maxCapacity: 20,
@@ -596,14 +617,15 @@ class _ToursScreenState extends State<ToursScreen> {
       ),
       Tour(
         id: 2,
-        name: 'Nile Cruise',
-        description: 'Enjoy a relaxing cruise on the Nile River',
+        name: 'Nile Sunset Cruise',
+        description:
+            'Enjoy a magical dinner cruise on the Nile River with live entertainment',
         startDate: DateTime.now(),
-        endDate: DateTime.now().add(const Duration(days: 2)),
-        price: 250,
+        endDate: DateTime.now().add(const Duration(days: 1)),
+        price: 85,
         rating: 4.9,
         reviewsCount: 382,
-        imageUrl: 'https://via.placeholder.com/400x300?text=Nile+Cruise',
+        imageUrl: 'assets/images/nile_sunset.jpg',
         imageGallery: [],
         itinerary: [],
         maxCapacity: 30,
@@ -621,21 +643,22 @@ class _ToursScreenState extends State<ToursScreen> {
         ),
         pickupLocation: 'Cairo',
         category: 'Nile',
-        amenities: ['All Meals', 'Accommodation', 'Entertainment'],
+        amenities: ['Dinner', 'Entertainment', 'Beverages'],
         isFavorite: false,
-        tourType: 'multi-day',
+        tourType: 'evening',
         difficulty: 'easy',
       ),
       Tour(
         id: 3,
-        name: 'Desert Adventure',
-        description: 'Thrilling desert safari and activities',
+        name: 'Abu Simbel & Aswan Adventure',
+        description:
+            'Thrilling adventure to the colossal temples of Abu Simbel and Aswan attractions',
         startDate: DateTime.now(),
         endDate: DateTime.now().add(const Duration(days: 2)),
         price: 180,
         rating: 4.7,
         reviewsCount: 156,
-        imageUrl: 'https://via.placeholder.com/400x300?text=Desert+Adventure',
+        imageUrl: 'assets/images/abu_simbel.jpg',
         imageGallery: [],
         itinerary: [],
         maxCapacity: 15,
@@ -653,10 +676,109 @@ class _ToursScreenState extends State<ToursScreen> {
         ),
         pickupLocation: 'Cairo',
         category: 'Adventure',
-        amenities: ['Camping', 'Camel Ride', 'Meals'],
+        amenities: ['Flights', 'Meals', 'Hotels'],
         isFavorite: false,
         tourType: 'multi-day',
         difficulty: 'moderate',
+      ),
+      Tour(
+        id: 4,
+        name: 'Giza Pyramids Experience',
+        description:
+            'See the iconic Great Pyramids and the mysterious Great Sphinx',
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(const Duration(days: 1)),
+        price: 75,
+        rating: 4.9,
+        reviewsCount: 512,
+        imageUrl: 'assets/images/pyramids.jpg',
+        imageGallery: [],
+        itinerary: [],
+        maxCapacity: 25,
+        currentCapacity: 20,
+        guide: Guide(
+          id: 4,
+          name: 'Noor Hassan',
+          email: 'noor@example.com',
+          phone: '+20666123456',
+          imageUrl: 'https://via.placeholder.com/100?text=Noor',
+          bio: 'Pyramid specialist guide',
+          languages: ['Arabic', 'English', 'Italian'],
+          rating: 4.8,
+          toursGuided: 400,
+        ),
+        pickupLocation: 'Cairo',
+        category: 'Cultural',
+        amenities: ['Breakfast', 'Transport', 'Photography spots'],
+        isFavorite: false,
+        tourType: 'half-day',
+        difficulty: 'easy',
+      ),
+      Tour(
+        id: 5,
+        name: 'Alexandria Beach & Citadel',
+        description:
+            'Beach day combined with the historic Alexandria Citadel and Mediterranean coast',
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(const Duration(days: 1)),
+        price: 95,
+        rating: 4.6,
+        reviewsCount: 198,
+        imageUrl: 'assets/images/alexandria.jpg',
+        imageGallery: [],
+        itinerary: [],
+        maxCapacity: 30,
+        currentCapacity: 22,
+        guide: Guide(
+          id: 5,
+          name: 'Layla Sayed',
+          email: 'layla@example.com',
+          phone: '+20777123456',
+          imageUrl: 'https://via.placeholder.com/100?text=Layla',
+          bio: 'Coastal tourism expert',
+          languages: ['Arabic', 'English', 'French'],
+          rating: 4.7,
+          toursGuided: 270,
+        ),
+        pickupLocation: 'Cairo',
+        category: 'Beach',
+        amenities: ['Beach access', 'Lunch', 'Transport'],
+        isFavorite: false,
+        tourType: 'full-day',
+        difficulty: 'easy',
+      ),
+      Tour(
+        id: 6,
+        name: 'Siwa Oasis Desert Escape',
+        description:
+            'Remote desert oasis adventure with unique culture and salt lakes',
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(const Duration(days: 3)),
+        price: 280,
+        rating: 4.5,
+        reviewsCount: 87,
+        imageUrl: 'assets/images/siwa.jpg',
+        imageGallery: [],
+        itinerary: [],
+        maxCapacity: 12,
+        currentCapacity: 8,
+        guide: Guide(
+          id: 6,
+          name: 'Hassan Bedouin',
+          email: 'hassan@example.com',
+          phone: '+20888123456',
+          imageUrl: 'https://via.placeholder.com/100?text=Hassan',
+          bio: 'Oasis adventure guide',
+          languages: ['Arabic', 'English'],
+          rating: 4.6,
+          toursGuided: 150,
+        ),
+        pickupLocation: 'Cairo',
+        category: 'Adventure',
+        amenities: ['All meals', 'Camping', 'Salt lake visit'],
+        isFavorite: false,
+        tourType: 'multi-day',
+        difficulty: 'hard',
       ),
     ];
   }

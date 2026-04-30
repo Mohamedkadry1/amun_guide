@@ -27,7 +27,7 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
     // Get tour ID from route arguments (if passed)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final tourProvider = context.read<TourProvider>();
-      
+
       // Only load if no tour is currently selected
       if (tourProvider.selectedTour == null && mounted) {
         // Attempt to load, will show mock data if failed
@@ -48,6 +48,14 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
         }
       }
     });
+  }
+
+  /// Get image provider based on URL type (asset or network)
+  ImageProvider _getImageProvider(String imageUrl) {
+    if (imageUrl.startsWith('assets/')) {
+      return AssetImage(imageUrl);
+    }
+    return NetworkImage(imageUrl);
   }
 
   @override
@@ -116,10 +124,12 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                     fit: StackFit.expand,
                     children: [
                       // Main Image
-                      Image.network(
-                        _selectedImageIndex == 0
-                            ? tour.imageUrl
-                            : tour.imageGallery[_selectedImageIndex - 1],
+                      Image(
+                        image: _getImageProvider(
+                          _selectedImageIndex == 0
+                              ? tour.imageUrl
+                              : tour.imageGallery[_selectedImageIndex - 1],
+                        ),
                         fit: BoxFit.cover,
                       ),
                       // Gradient Overlay
@@ -154,7 +164,9 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              tour.isFavorite ? Icons.favorite : Icons.favorite_border,
+                              tour.isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
                               color: AppColors.gold,
                               size: 24,
                             ),
@@ -182,7 +194,8 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                               children: [
                                 Text(
                                   tour.name,
-                                  style: Theme.of(context).textTheme.headlineSmall,
+                                  style:
+                                      Theme.of(context).textTheme.headlineSmall,
                                 ),
                                 const SizedBox(height: 4),
                                 Row(
@@ -190,7 +203,8 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                                     const Icon(Icons.star,
                                         color: AppColors.gold, size: 18),
                                     const SizedBox(width: 4),
-                                    Text('${tour.rating} (${tour.reviewsCount} reviews)'),
+                                    Text(
+                                        '${tour.rating} (${tour.reviewsCount} reviews)'),
                                   ],
                                 ),
                               ],
@@ -233,6 +247,54 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                         ],
                       ),
                       const SizedBox(height: 24),
+
+                      // Gallery
+                      if (tour.imageGallery.isNotEmpty) ...[
+                        const Text(
+                          'Gallery',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 100,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: tour.imageGallery.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 8),
+                            itemBuilder: (_, i) {
+                              return GestureDetector(
+                                onTap: () =>
+                                    setState(() => _selectedImageIndex = i + 1),
+                                child: Container(
+                                  width: 100,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: _selectedImageIndex == i + 1
+                                          ? AppColors.gold
+                                          : Colors.transparent,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image(
+                                      image: _getImageProvider(
+                                          tour.imageGallery[i]),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
 
                       // Tabs
                       Container(
@@ -297,8 +359,8 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                                           borderRadius:
                                               BorderRadius.circular(8),
                                           border: Border.all(
-                                            color: AppColors.gold
-                                                .withOpacity(0.3),
+                                            color:
+                                                AppColors.gold.withOpacity(0.3),
                                           ),
                                         ),
                                         child: Text(
@@ -363,8 +425,7 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                                                   'Day ${item.day}',
                                                   style: const TextStyle(
                                                     color: Colors.black,
-                                                    fontWeight:
-                                                        FontWeight.bold,
+                                                    fontWeight: FontWeight.bold,
                                                     fontSize: 11,
                                                   ),
                                                 ),
@@ -413,14 +474,12 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                                             runSpacing: 6,
                                             children: item.activities
                                                 .map((activity) => Container(
-                                                      padding:
-                                                          const EdgeInsets
-                                                              .symmetric(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
                                                         horizontal: 8,
                                                         vertical: 4,
                                                       ),
-                                                      decoration:
-                                                          BoxDecoration(
+                                                      decoration: BoxDecoration(
                                                         color: AppColors.gold
                                                             .withOpacity(0.2),
                                                         borderRadius:
@@ -431,8 +490,7 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                                                         activity,
                                                         style: const TextStyle(
                                                           fontSize: 11,
-                                                          color:
-                                                              AppColors.gold,
+                                                          color: AppColors.gold,
                                                         ),
                                                       ),
                                                     ))
@@ -458,15 +516,14 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 50,
-                                    backgroundImage: NetworkImage(
-                                        tour.guide.imageUrl),
+                                    backgroundImage:
+                                        _getImageProvider(tour.guide.imageUrl),
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
                                     tour.guide.name,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium,
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 4),
                                   Row(
@@ -507,8 +564,7 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                                                   color: AppColors.gold
                                                       .withOpacity(0.1),
                                                   borderRadius:
-                                                      BorderRadius.circular(
-                                                          20),
+                                                      BorderRadius.circular(20),
                                                 ),
                                                 child: Text(
                                                   lang,
@@ -564,8 +620,7 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
                                         color: AppColors.bgCard,
-                                        borderRadius:
-                                            BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Column(
                                         crossAxisAlignment:
@@ -576,10 +631,11 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                                               CircleAvatar(
                                                 radius: 20,
                                                 backgroundImage:
-                                                    NetworkImage(review
-                                                        .userImage.isNotEmpty
-                                                    ? review.userImage
-                                                    : 'https://via.placeholder.com/40'),
+                                                    _getImageProvider(review
+                                                            .userImage
+                                                            .isNotEmpty
+                                                        ? review.userImage
+                                                        : 'https://via.placeholder.com/40'),
                                               ),
                                               const SizedBox(width: 12),
                                               Expanded(
@@ -602,12 +658,13 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                                                           5,
                                                           (index) => Icon(
                                                             index <
-                                                                    review.rating
+                                                                    review
+                                                                        .rating
                                                                 ? Icons.star
                                                                 : Icons
                                                                     .star_border,
-                                                            color: AppColors
-                                                                .gold,
+                                                            color:
+                                                                AppColors.gold,
                                                             size: 14,
                                                           ),
                                                         ),
@@ -748,16 +805,17 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
     return Tour(
       id: 1,
       name: 'Luxor Ancient Wonders',
-      description: 'Experience the magnificence of ancient Egypt with guided tours through the temples and monuments of Luxor.',
+      description:
+          'Experience the magnificence of ancient Egypt with guided tours through the temples and monuments of Luxor.',
       startDate: DateTime.now(),
       endDate: DateTime.now().add(const Duration(days: 3)),
       price: 450.0,
       rating: 4.8,
       reviewsCount: 156,
-      imageUrl: 'https://via.placeholder.com/500x300?text=Luxor+Tour',
+      imageUrl: 'assets/images/karnak.jpg',
       imageGallery: [
-        'https://via.placeholder.com/500x300?text=Karnak+Temple',
-        'https://via.placeholder.com/500x300?text=Valley+of+Kings',
+        'assets/images/karnak2.jpg',
+        'assets/images/philae.jpg',
       ],
       itinerary: [],
       maxCapacity: 20,
@@ -767,7 +825,7 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
         name: 'Ahmed Hassan',
         email: 'ahmed@example.com',
         phone: '+20123456789',
-        imageUrl: 'https://via.placeholder.com/100?text=Ahmed',
+        imageUrl: 'assets/images/ahmed.png',
         bio: 'Expert Egyptologist with 15+ years of experience',
         languages: ['Arabic', 'English', 'French'],
         rating: 4.9,
@@ -775,7 +833,13 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
       ),
       pickupLocation: 'Cairo Hotel Zone',
       category: 'Cultural',
-      amenities: ['Breakfast', 'Lunch', 'Bottled Water', 'AC Transport', 'Guide'],
+      amenities: [
+        'Breakfast',
+        'Lunch',
+        'Bottled Water',
+        'AC Transport',
+        'Guide'
+      ],
       isFavorite: false,
       tourType: 'multi-day',
       difficulty: 'moderate',

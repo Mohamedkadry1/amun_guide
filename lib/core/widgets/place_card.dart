@@ -33,9 +33,67 @@ class PlaceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return style == PlaceCardStyle.grid
-        ? _gridCard()
-        : _listCard();
+    return style == PlaceCardStyle.grid ? _gridCard() : _listCard();
+  }
+
+  /// Build image widget that supports both local assets and network URLs
+  /// Assets: 'assets/images/filename.jpg'
+  /// Network: 'https://example.com/image.jpg'
+  Widget _buildImage({
+    required double width,
+    required double height,
+    required BorderRadius borderRadius,
+    bool isClipped = false,
+  }) {
+    final isAsset = image.startsWith('assets/');
+
+    Widget imageWidget = isAsset
+        ? Image.asset(
+            image,
+            fit: BoxFit.cover,
+            width: width,
+            height: height,
+            errorBuilder: (_, __, ___) => Container(
+              color: AppColors.bgInput,
+              child: const Icon(Icons.image, color: Colors.white24, size: 40),
+            ),
+          )
+        : Image.network(
+            image,
+            fit: BoxFit.cover,
+            width: width,
+            height: height,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                color: AppColors.bgInput,
+                child: const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.gold,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+            errorBuilder: (_, __, ___) => Container(
+              color: AppColors.bgInput,
+              child: const Icon(Icons.image, color: Colors.white24, size: 40),
+            ),
+          );
+
+    if (isClipped) {
+      return ClipRRect(
+        borderRadius: borderRadius,
+        child: imageWidget,
+      );
+    }
+    return imageWidget;
   }
 
   // ─── Grid Style ───────────────────────────────────────
@@ -54,48 +112,29 @@ class PlaceCard extends StatelessWidget {
             Stack(children: [
               ClipRRect(
                 borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(16)),
+                    const BorderRadius.vertical(top: Radius.circular(16)),
                 child: SizedBox(
-                  height: 120, width: double.infinity,
-                  child: Image.network(
-                    image,
-                    fit: BoxFit.cover,
+                  height: 120,
+                  width: double.infinity,
+                  child: _buildImage(
                     width: double.infinity,
                     height: 120,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        color: AppColors.bgInput,
-                        child: const Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                AppColors.gold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                    errorBuilder: (_, __, ___) => Container(
-                      color: AppColors.bgInput,
-                      child: const Icon(Icons.image,
-                          color: Colors.white24, size: 40),
-                    ),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(16)),
+                    isClipped: true,
                   ),
                 ),
               ),
               // Save button
               if (onSave != null)
                 Positioned(
-                  top: 8, right: 8,
+                  top: 8,
+                  right: 8,
                   child: GestureDetector(
                     onTap: onSave,
                     child: Container(
-                      width: 32, height: 32,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
                         color: Colors.black54,
                         shape: BoxShape.circle,
@@ -111,10 +150,11 @@ class PlaceCard extends StatelessWidget {
               // Category
               if (category != null)
                 Positioned(
-                  bottom: 8, left: 8,
+                  bottom: 8,
+                  left: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: Colors.black54,
                       borderRadius: BorderRadius.circular(8),
@@ -141,15 +181,14 @@ class PlaceCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
                   Text(location,
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 11)),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 11)),
                   const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(children: [
-                        const Icon(Icons.star,
-                            color: AppColors.gold, size: 12),
+                        const Icon(Icons.star, color: AppColors.gold, size: 12),
                         const SizedBox(width: 3),
                         Text(rating,
                             style: const TextStyle(
@@ -186,35 +225,13 @@ class PlaceCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: SizedBox(
-              width: 90, height: 90,
-              child: Image.network(
-                image,
-                fit: BoxFit.cover,
+              width: 90,
+              height: 90,
+              child: _buildImage(
                 width: 90,
                 height: 90,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: AppColors.bgInput,
-                    child: const Center(
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.gold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-                errorBuilder: (_, __, ___) => Container(
-                  color: AppColors.bgInput,
-                  child: const Icon(Icons.image,
-                      color: Colors.white24, size: 32),
-                ),
+                borderRadius: BorderRadius.circular(12),
+                isClipped: true,
               ),
             ),
           ),
@@ -241,16 +258,15 @@ class PlaceCard extends StatelessWidget {
                       color: Colors.white38, size: 12),
                   const SizedBox(width: 3),
                   Text(location,
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 12)),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 12)),
                 ]),
                 const SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(children: [
-                      const Icon(Icons.star,
-                          color: AppColors.gold, size: 13),
+                      const Icon(Icons.star, color: AppColors.gold, size: 13),
                       const SizedBox(width: 3),
                       Text(rating,
                           style: const TextStyle(

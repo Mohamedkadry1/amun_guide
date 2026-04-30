@@ -8,7 +8,7 @@ import '../../features/places/models/place_models.dart';
 
 class PlaceDetailsScreen extends StatefulWidget {
   final int? placeId;
-  
+
   const PlaceDetailsScreen({super.key, this.placeId});
 
   @override
@@ -24,9 +24,21 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.placeId != null) {
-        Provider.of<PlaceProvider>(context, listen: false).loadPlaceDetails(widget.placeId!);
+        Provider.of<PlaceProvider>(context, listen: false)
+            .loadPlaceDetails(widget.placeId!);
       }
     });
+  }
+
+  /// Get image provider based on URL type (asset or network)
+  ImageProvider _getImageProvider(String imageUrl) {
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('https')) {
+      // لو المسار بيبدأ بـ http يبقى صورة من النت
+      return NetworkImage(imageUrl);
+    } else {
+      // غير كده يبقى صورة من الـ Assets بتاعة المشروع
+      return AssetImage(imageUrl);
+    }
   }
 
   @override
@@ -34,11 +46,12 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
     return Consumer<PlaceProvider>(
       builder: (_, provider, __) {
         final place = provider.selectedPlace ?? _getMockPlace();
-        
+
         if (provider.isLoading && provider.selectedPlace == null) {
           return Scaffold(
             backgroundColor: const Color(0xFF1A1208),
-            body: const Center(child: CircularProgressIndicator(color: Colors.white)),
+            body: const Center(
+                child: CircularProgressIndicator(color: Colors.white)),
           );
         }
 
@@ -47,7 +60,8 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
             backgroundColor: const Color(0xFF1A1208),
             appBar: AppBar(backgroundColor: const Color(0xFF1A1208)),
             body: const Center(
-              child: Text('Place not found', style: TextStyle(color: Colors.white)),
+              child: Text('Place not found',
+                  style: TextStyle(color: Colors.white)),
             ),
           );
         }
@@ -72,7 +86,8 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                           color: Colors.black54,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.arrow_back, color: Colors.white),
+                        child:
+                            const Icon(Icons.arrow_back, color: Colors.white),
                       ),
                     ),
                     actions: [
@@ -85,7 +100,8 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                             color: Colors.black54,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.share_outlined, color: Colors.white, size: 20),
+                          child: const Icon(Icons.share_outlined,
+                              color: Colors.white, size: 20),
                         ),
                       ),
                       GestureDetector(
@@ -98,7 +114,8 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                           }
                         },
                         child: Container(
-                          margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+                          margin: const EdgeInsets.only(
+                              right: 8, top: 8, bottom: 8),
                           padding: const EdgeInsets.all(8),
                           decoration: const BoxDecoration(
                             color: Colors.black54,
@@ -116,13 +133,13 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                       background: Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.network(
-                            place.imageUrl,
+                          // في صفحة الـ Details
+                          Image(
+                            image: _getImageProvider(
+                                place.imageUrl), // الميثود اللي كتبناها
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: const Color(0xFF2A1F0E),
-                              child: const Icon(Icons.image, color: Colors.white24, size: 80),
-                            ),
+                            width: double.infinity,
+                            height: 350, // أو الارتفاع اللي متصمم عليه
                           ),
                           const DecoratedBox(
                             decoration: BoxDecoration(
@@ -144,7 +161,6 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-
                         // ── الاسم والموقع والتقييم ──────────────
                         Text(
                           place.name,
@@ -160,13 +176,19 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                         // الموقع والنوع
                         Row(
                           children: [
-                            const Icon(Icons.location_on, color: AppColors.gold, size: 16),
+                            const Icon(Icons.location_on,
+                                color: AppColors.gold, size: 16),
                             const SizedBox(width: 4),
-                            Text(place.location, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                            Text(place.location,
+                                style: const TextStyle(
+                                    color: Colors.white54, fontSize: 13)),
                             const SizedBox(width: 8),
-                            const Text('•', style: TextStyle(color: Colors.white24)),
+                            const Text('•',
+                                style: TextStyle(color: Colors.white24)),
                             const SizedBox(width: 8),
-                            const Text('Historical Site', style: TextStyle(color: Colors.white54, fontSize: 13)),
+                            const Text('Historical Site',
+                                style: TextStyle(
+                                    color: Colors.white54, fontSize: 13)),
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -175,11 +197,15 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                         Row(
                           children: [
                             Row(
-                              children: List.generate(5, (i) => Icon(
-                                i < place.rating.toInt() ? Icons.star : Icons.star_half,
-                                color: AppColors.gold,
-                                size: 18,
-                              )),
+                              children: List.generate(
+                                  5,
+                                  (i) => Icon(
+                                        i < place.rating.toInt()
+                                            ? Icons.star
+                                            : Icons.star_half,
+                                        color: AppColors.gold,
+                                        size: 18,
+                                      )),
                             ),
                             const SizedBox(width: 8),
                             Text(
@@ -193,7 +219,8 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                             const SizedBox(width: 6),
                             Text(
                               '(${place.reviewsCount} reviews)',
-                              style: const TextStyle(color: Colors.white38, fontSize: 13),
+                              style: const TextStyle(
+                                  color: Colors.white38, fontSize: 13),
                             ),
                           ],
                         ),
@@ -206,7 +233,8 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF221A0A),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.gold.withOpacity(0.35)),
+                            border: Border.all(
+                                color: AppColors.gold.withOpacity(0.35)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,7 +247,8 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                                       color: AppColors.gold.withOpacity(0.15),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.auto_awesome, color: AppColors.gold, size: 16),
+                                    child: const Icon(Icons.auto_awesome,
+                                        color: AppColors.gold, size: 16),
                                   ),
                                   const SizedBox(width: 8),
                                   const Text(
@@ -254,7 +283,10 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                               const SizedBox(height: 6),
                               const Text(
                                 'Early morning offers the best lighting for photos and avoids the midday heat and largest crowds.',
-                                style: TextStyle(color: Colors.white38, fontSize: 13, height: 1.5),
+                                style: TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 13,
+                                    height: 1.5),
                               ),
                             ],
                           ),
@@ -265,18 +297,25 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                         // ── About ───────────────────────────────
                         const Text(
                           'About',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 10),
                         Text(
                           place.description,
-                          style: const TextStyle(color: Colors.white54, fontSize: 14, height: 1.7),
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 14, height: 1.7),
                           maxLines: _isExpanded ? null : 4,
-                          overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                          overflow: _isExpanded
+                              ? TextOverflow.visible
+                              : TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 8),
                         GestureDetector(
-                          onTap: () => setState(() => _isExpanded = !_isExpanded),
+                          onTap: () =>
+                              setState(() => _isExpanded = !_isExpanded),
                           child: Row(
                             children: [
                               Text(
@@ -289,7 +328,9 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                               ),
                               const SizedBox(width: 4),
                               Icon(
-                                _isExpanded ? Icons.arrow_upward : Icons.arrow_forward,
+                                _isExpanded
+                                    ? Icons.arrow_upward
+                                    : Icons.arrow_forward,
                                 color: AppColors.gold,
                                 size: 14,
                               ),
@@ -305,13 +346,17 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                           children: [
                             const Text(
                               'Gallery',
-                              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold),
                             ),
                             GestureDetector(
                               onTap: () {},
                               child: const Text(
                                 'View All',
-                                style: TextStyle(color: AppColors.gold, fontSize: 13),
+                                style: TextStyle(
+                                    color: AppColors.gold, fontSize: 13),
                               ),
                             ),
                           ],
@@ -322,7 +367,8 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             itemCount: provider.selectedPlaceImages.length,
-                            separatorBuilder: (_, __) => const SizedBox(width: 10),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 10),
                             itemBuilder: (_, i) {
                               final img = provider.selectedPlaceImages[i];
                               return ClipRRect(
@@ -330,12 +376,13 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                                 child: SizedBox(
                                   width: 160,
                                   height: 130,
-                                  child: Image.network(
-                                    img.url,
+                                  child: Image(
+                                    image: _getImageProvider(img.url),
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => Container(
                                       color: const Color(0xFF2A1F0E),
-                                      child: const Icon(Icons.image, color: Colors.white24),
+                                      child: const Icon(Icons.image,
+                                          color: Colors.white24),
                                     ),
                                   ),
                                 ),
@@ -354,7 +401,10 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                         // ── Nearby Attractions ──────────────────
                         const Text(
                           'Nearby Attractions',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 14),
                         const SizedBox(height: 160),
@@ -366,10 +416,15 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
 
               // ── Bottom Bar ────────────────────────────────────
               Positioned(
-                bottom: 0, left: 0, right: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
                 child: Container(
                   padding: EdgeInsets.fromLTRB(
-                    20, 14, 20, MediaQuery.of(context).padding.bottom + 14,
+                    20,
+                    14,
+                    20,
+                    MediaQuery.of(context).padding.bottom + 14,
                   ),
                   decoration: const BoxDecoration(
                     color: Color(0xFF1A1208),
@@ -379,15 +434,20 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => Navigator.pushNamed(context, '/ai-chat'),
+                          onPressed: () =>
+                              Navigator.pushNamed(context, '/ai-chat'),
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: AppColors.gold.withOpacity(0.5)),
+                            side: BorderSide(
+                                color: AppColors.gold.withOpacity(0.5)),
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30)),
                           ),
                           child: const Text(
                             'Ask AI',
-                            style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                                color: AppColors.gold,
+                                fontWeight: FontWeight.w600),
                           ),
                         ),
                       ),
@@ -395,11 +455,13 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                       Expanded(
                         flex: 2,
                         child: ElevatedButton(
-                          onPressed: () => Navigator.pushNamed(context, '/tour-details'),
+                          onPressed: () =>
+                              Navigator.pushNamed(context, '/tour-details'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.gold,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30)),
                             elevation: 0,
                           ),
                           child: const Text(
@@ -437,7 +499,8 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
         children: [
           const Text(
             'Reviews',
-            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 14),
           Row(
@@ -454,11 +517,15 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                     ),
                   ),
                   Row(
-                    children: List.generate(5, (i) => Icon(
-                      i < place.rating.toInt() ? Icons.star : Icons.star_half,
-                      color: AppColors.gold,
-                      size: 14,
-                    )),
+                    children: List.generate(
+                        5,
+                        (i) => Icon(
+                              i < place.rating.toInt()
+                                  ? Icons.star
+                                  : Icons.star_half,
+                              color: AppColors.gold,
+                              size: 14,
+                            )),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -477,7 +544,9 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 2),
                       child: Row(
                         children: [
-                          Text('${5 - i}', style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                          Text('${5 - i}',
+                              style: const TextStyle(
+                                  color: Colors.white38, fontSize: 11)),
                           const SizedBox(width: 6),
                           Expanded(
                             child: ClipRRect(
@@ -485,7 +554,8 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                               child: LinearProgressIndicator(
                                 value: vals[i],
                                 backgroundColor: Colors.white10,
-                                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                    AppColors.gold),
                                 minHeight: 6,
                               ),
                             ),
@@ -504,7 +574,7 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
   }
 
   // ── Nearby Card ────────────────────────────────────────
-  Widget _buildNearbyCard({
+  Widget buildNearbyCard({
     required String img,
     required String name,
     required String dist,
@@ -533,17 +603,25 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(name, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(name,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
             const SizedBox(height: 2),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(dist, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                Text(dist,
+                    style:
+                        const TextStyle(color: Colors.white38, fontSize: 11)),
                 Row(
                   children: [
                     const Icon(Icons.star, color: AppColors.gold, size: 11),
                     const SizedBox(width: 2),
-                    Text(rating, style: const TextStyle(color: AppColors.gold, fontSize: 11)),
+                    Text(rating,
+                        style: const TextStyle(
+                            color: AppColors.gold, fontSize: 11)),
                   ],
                 ),
               ],
@@ -560,8 +638,9 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
       id: 1,
       name: 'Great Pyramids of Giza',
       location: 'Giza, Egypt',
-      description: 'The Great Pyramids are the most iconic landmarks in Egypt and among the Seven Wonders of the Ancient World. Built during the Old Kingdom period, these magnificent structures served as elaborate tombs for Pharaohs.',
-      imageUrl: 'https://via.placeholder.com/600x400?text=Great+Pyramids',
+      description:
+          'The Great Pyramids are the most iconic landmarks in Egypt and among the Seven Wonders of the Ancient World. Built during the Old Kingdom period, these magnificent structures served as elaborate tombs for Pharaohs.',
+      imageUrl: 'assets/images/pyramids.jpg',
       rating: 4.8,
       price: 50,
       reviewsCount: 1250,
