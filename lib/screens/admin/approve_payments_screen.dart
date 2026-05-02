@@ -1,73 +1,60 @@
 // 📁 lib/screens/admin/approve_payments_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_assets.dart';
 import '../../core/widgets/amun_app_bar.dart';
 import '../../core/widgets/amun_filter_chip.dart';
+import '../../providers/admin_provider.dart';
+import '../../data/models/payment_model.dart';
 
 class ApprovePaymentsScreen extends StatefulWidget {
   const ApprovePaymentsScreen({super.key});
 
   @override
-  State<ApprovePaymentsScreen> createState() =>
-      _ApprovePaymentsScreenState();
+  State<ApprovePaymentsScreen> createState() => _ApprovePaymentsScreenState();
 }
 
 class _ApprovePaymentsScreenState extends State<ApprovePaymentsScreen> {
   int _activeFilter = 0;
   final _filters = ['Pending', 'All', 'Approved', 'Rejected'];
 
-  final List<Map<String, dynamic>> _payments = [
-    {
-      'id': 'TRX-88392', 'user': 'Sarah Ahmed', 'avatar': AppAssets.sarah,
-      'tour': 'Luxor & Aswan Adventure', 'amount': '\$450.00',
-      'date': '12 Oct 2024', 'image': AppAssets.receipt1, 'status': 'Pending',
-    },
-    {
-      'id': 'TRX-88391', 'user': 'David Miller', 'avatar': AppAssets.david,
-      'tour': 'Giza Pyramids Day Tour', 'amount': '\$150.00',
-      'date': '11 Oct 2024', 'image': AppAssets.receipt2, 'status': 'Pending',
-    },
-    {
-      'id': 'TRX-77281', 'user': 'Anna K.', 'avatar': AppAssets.anna,
-      'tour': 'Nile Cruise 3 Days', 'amount': '\$350.00',
-      'date': '05 Oct 2024', 'image': AppAssets.receipt3, 'status': 'Approved',
-    },
-    {
-      'id': 'TRX-66170', 'user': 'Marcus L.', 'avatar': AppAssets.marcus,
-      'tour': 'Siwa Oasis Adventure', 'amount': '\$280.00',
-      'date': '28 Sep 2024', 'image': AppAssets.receipt4, 'status': 'Rejected',
-    },
-  ];
-
-  List<Map<String, dynamic>> get _filtered {
-    if (_activeFilter == 1) return _payments;
-    return _payments
-        .where((p) => p['status'] == _filters[_activeFilter])
-        .toList();
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AdminProvider>().loadPayments();
+    });
   }
 
-  void _updateStatus(int index, String status) {
-    setState(() => _payments[index]['status'] = status);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Payment ${status.toLowerCase()} successfully!'),
-        backgroundColor:
-        status == 'Approved' ? Colors.green : Colors.red,
-      ),
-    );
+  List<PaymentModel> _getFiltered(List<PaymentModel> payments) {
+    if (_activeFilter == 1) return payments;
+    final status = _filters[_activeFilter].toLowerCase();
+    return payments.where((p) => p.status.toLowerCase() == status).toList();
+  }
+
+  Future<void> _updateStatus(int id, String status) async {
+    final ok = await context.read<AdminProvider>().updatePayment(id, status);
+    if (ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment $status successfully!'),
+          backgroundColor: status == 'Approved' ? Colors.green : Colors.red,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final pending = _payments.where((p) => p['status'] == 'Pending').length;
+    final prov = context.watch<AdminProvider>();
+    final filtered = _getFiltered(prov.payments);
+    final pendingCount = prov.payments.where((p) => p.status.toLowerCase() == 'pending').length;
 
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       appBar: const AmunAppBar(title: 'Approve Payments'),
       body: Column(children: [
-
         // ─── Filters ──────────────────────────────
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -76,7 +63,7 @@ class _ApprovePaymentsScreenState extends State<ApprovePaymentsScreen> {
             child: Row(
               children: List.generate(
                 _filters.length,
-                    (i) => AmunFilterChip(
+                (i) => AmunFilterChip(
                   label: _filters[i],
                   isActive: _activeFilter == i,
                   onTap: () => setState(() => _activeFilter = i),
@@ -90,24 +77,20 @@ class _ApprovePaymentsScreenState extends State<ApprovePaymentsScreen> {
 
         // ─── List ─────────────────────────────────
         Expanded(
-          child: _filtered.isEmpty
-              ? const Center(
-              child: Text('No payments found',
-                  style: TextStyle(color: Colors.white38)))
-              : ListView.separated(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            itemCount: _filtered.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 14),
-            itemBuilder: (_, i) {
-              final p = _filtered[i];
-              final realIndex = _payments.indexOf(p);
-              return _paymentCard(p, realIndex);
-            },
-          ),
+          child: prov.isLoading && prov.payments.isEmpty
+            ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+            : filtered.isEmpty
+                ? const Center(child: Text('No payments found', style: TextStyle(color: Colors.white38)))
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 14),
+                    itemBuilder: (_, i) => _paymentCard(filtered[i]),
+                  ),
         ),
 
         // ─── Bottom Bar ───────────────────────────
-        if (pending > 0)
+        if (pendingCount > 0)
           Container(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
             decoration: const BoxDecoration(
@@ -123,7 +106,7 @@ class _ApprovePaymentsScreenState extends State<ApprovePaymentsScreen> {
                     color: AppColors.gold, size: 18),
               ),
               const SizedBox(width: 12),
-              Text('$pending pending receipt${pending > 1 ? 's' : ''} today',
+              Text('$pendingCount pending receipt${pendingCount > 1 ? 's' : ''} today',
                   style: const TextStyle(
                       color: Colors.white70, fontSize: 14)),
             ]),
@@ -132,8 +115,8 @@ class _ApprovePaymentsScreenState extends State<ApprovePaymentsScreen> {
     );
   }
 
-  Widget _paymentCard(Map<String, dynamic> p, int index) {
-    final isPending = p['status'] == 'Pending';
+  Widget _paymentCard(PaymentModel p) {
+    final isPending = p.status.toLowerCase() == 'pending';
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -141,34 +124,27 @@ class _ApprovePaymentsScreenState extends State<ApprovePaymentsScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isPending
-              ? AppColors.gold.withOpacity(0.3)
+              ? AppColors.gold.withValues(alpha: 0.3)
               : Colors.white10,
         ),
       ),
       child: Column(children: [
-
-        // User + Amount
         Row(children: [
-          ClipOval(
-            child: SizedBox(
-              width: 38, height: 38,
-              child: Image.asset(p['avatar'], fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                      color: AppColors.bgInput,
-                      child: const Icon(Icons.person,
-                          color: Colors.white38))),
-            ),
+          Container(
+            width: 38, height: 38,
+            decoration: const BoxDecoration(color: AppColors.bgInput, shape: BoxShape.circle),
+            child: const Icon(Icons.person, color: Colors.white38),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(p['user'],
+              Text('User #${p.payableId}', // Mock user info
                   style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 14)),
-              Text(p['tour'],
+              Text(p.payableType.replaceAll('_', ' '),
                   style: const TextStyle(
                       color: Colors.white38, fontSize: 12),
                   maxLines: 1,
@@ -176,101 +152,40 @@ class _ApprovePaymentsScreenState extends State<ApprovePaymentsScreen> {
             ]),
           ),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(p['amount'],
+            Text('\$${p.amount}',
                 style: const TextStyle(
                     color: AppColors.gold,
                     fontWeight: FontWeight.bold,
                     fontSize: 15)),
             const SizedBox(height: 4),
-            _statusBadge(p['status']),
+            _statusBadge(p.status),
           ]),
         ]),
 
         const SizedBox(height: 12),
 
-        // Receipt + ID
-        Row(children: [
+        // Receipt Image
+        if (p.receiptImage != null)
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: SizedBox(
-              width: 56, height: 56,
-              child: Image.asset(p['image'], fit: BoxFit.cover,
+              width: double.infinity, height: 120,
+              child: Image.network(p.receiptImage!, fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                       color: AppColors.bgInput,
-                      child: const Icon(Icons.receipt_long,
-                          color: Colors.white24, size: 24))),
+                      child: const Icon(Icons.broken_image, color: Colors.white12))),
             ),
           ),
-          const SizedBox(width: 10),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('ID: ${p['id']}',
-                style: const TextStyle(
-                    color: Colors.white54, fontSize: 12)),
-            const SizedBox(height: 3),
-            Text(p['date'],
-                style: const TextStyle(
-                    color: Colors.white38, fontSize: 12)),
-          ]),
-        ]),
 
-        // Approve / Reject buttons (only for pending)
         if (isPending) ...[
           const SizedBox(height: 12),
-          const Divider(color: Colors.white10),
-          const SizedBox(height: 10),
           Row(children: [
             Expanded(
-              child: GestureDetector(
-                onTap: () => _updateStatus(index, 'Rejected'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: Colors.red.withOpacity(0.3)),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.close, color: Colors.red, size: 16),
-                      SizedBox(width: 6),
-                      Text('Reject',
-                          style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13)),
-                    ],
-                  ),
-                ),
-              ),
+              child: _actionBtn('Reject', Colors.red, () => _updateStatus(p.id, 'Rejected')),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: GestureDetector(
-                onTap: () => _updateStatus(index, 'Approved'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: Colors.green.withOpacity(0.3)),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.check, color: Colors.green, size: 16),
-                      SizedBox(width: 6),
-                      Text('Approve',
-                          style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13)),
-                    ],
-                  ),
-                ),
-              ),
+              child: _actionBtn('Approve', Colors.green, () => _updateStatus(p.id, 'Approved')),
             ),
           ]),
         ],
@@ -278,21 +193,43 @@ class _ApprovePaymentsScreenState extends State<ApprovePaymentsScreen> {
     );
   }
 
+  Widget _actionBtn(String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Center(
+          child: Text(label,
+              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+        ),
+      ),
+    );
+  }
+
   Widget _statusBadge(String status) {
     Color color;
-    switch (status) {
-      case 'Approved': color = Colors.green; break;
-      case 'Rejected': color = Colors.red;   break;
-      default:         color = AppColors.gold;
+    final s = status.toLowerCase();
+    if (s == 'approved' || s == 'completed') {
+      color = Colors.green;
+    } else if (s == 'rejected' || s == 'failed') {
+      color = Colors.red;
+    } else {
+      color = AppColors.gold;
     }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
-      child: Text(status,
+      child: Text(status.toUpperCase(),
           style: TextStyle(
               color: color, fontSize: 10, fontWeight: FontWeight.bold)),
     );

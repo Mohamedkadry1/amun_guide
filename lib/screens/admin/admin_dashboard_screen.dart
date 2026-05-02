@@ -1,14 +1,33 @@
 // 📁 lib/screens/admin/admin_dashboard_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_assets.dart';
+import '../../providers/admin_provider.dart';
+import '../../providers/auth_provider.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
   @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AdminProvider>().loadStats();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final prov = context.watch<AdminProvider>();
+    final stats = prov.stats;
+    final user = context.watch<AuthProvider>().user;
+
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       body: CustomScrollView(
@@ -27,15 +46,15 @@ class AdminDashboardScreen extends StatelessWidget {
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Admin Panel',
+                    children: [
+                      const Text('Admin Panel',
                           style: TextStyle(
                               color: Colors.white54,
                               fontSize: 13,
                               letterSpacing: 1)),
-                      SizedBox(height: 4),
-                      Text('Good Morning, Admin 👋',
-                          style: TextStyle(
+                      const SizedBox(height: 4),
+                      Text('Good Morning, ${user?.name ?? 'Admin'} 👋',
+                          style: const TextStyle(
                               color: Colors.white,
                               fontSize: 20,
                               fontWeight: FontWeight.bold)),
@@ -48,11 +67,10 @@ class AdminDashboardScreen extends StatelessWidget {
                       border: Border.all(color: AppColors.gold, width: 2),
                     ),
                     child: ClipOval(
-                      child: Image.asset(AppAssets.ahmed,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
-                              Icons.admin_panel_settings,
-                              color: AppColors.gold)),
+                      child: user?.profileImage != null
+                        ? Image.network(user!.profileImage!, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _adminPlaceholder())
+                        : _adminPlaceholder(),
                     ),
                   ),
                 ],
@@ -67,20 +85,20 @@ class AdminDashboardScreen extends StatelessWidget {
 
                 // ─── Stats Row ────────────────────
                 Row(children: [
-                  _statCard('24', 'Total Tours', Icons.map_outlined),
+                  _statCard(stats['tours_count']?.toString() ?? '0', 'Total Tours', Icons.map_outlined),
                   const SizedBox(width: 12),
-                  _statCard('8', 'Pending\nPayments', Icons.pending_outlined),
+                  _statCard(stats['pending_payments']?.toString() ?? '0', 'Pending\nPayments', Icons.pending_outlined),
                   const SizedBox(width: 12),
-                  _statCard('142', 'Total Users', Icons.people_outline),
+                  _statCard(stats['users_count']?.toString() ?? '0', 'Total Users', Icons.people_outline),
                 ]),
 
                 const SizedBox(height: 12),
 
                 Row(children: [
-                  _statCard('\$12.4K', 'Revenue', Icons.attach_money,
+                  _statCard('\$${stats['revenue'] ?? '0'}', 'Revenue', Icons.attach_money,
                       wide: true),
                   const SizedBox(width: 12),
-                  _statCard('4.8', 'Avg Rating', Icons.star_outline,
+                  _statCard(stats['avg_rating']?.toString() ?? '0.0', 'Avg Rating', Icons.star_outline,
                       wide: true),
                 ]),
 
@@ -221,9 +239,9 @@ class AdminDashboardScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.25)),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Row(children: [
           Icon(icon, color: color, size: 26),
@@ -258,7 +276,7 @@ class AdminDashboardScreen extends StatelessWidget {
         Container(
           width: 40, height: 40,
           decoration: BoxDecoration(
-              color: color.withOpacity(0.12), shape: BoxShape.circle),
+              color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
           child: Icon(icon, color: color, size: 18),
         ),
         const SizedBox(width: 12),
@@ -281,4 +299,10 @@ class AdminDashboardScreen extends StatelessWidget {
       ]),
     );
   }
+
+  Widget _adminPlaceholder() => const Icon(
+    Icons.admin_panel_settings,
+    color: AppColors.gold,
+    size: 24,
+  );
 }

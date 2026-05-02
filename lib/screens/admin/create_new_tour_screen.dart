@@ -1,10 +1,14 @@
 // 📁 lib/screens/admin/create_new_tour_screen.dart
 
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/amun_app_bar.dart';
 import '../../core/widgets/amun_button.dart';
 import '../../core/widgets/amun_input.dart';
+import '../../providers/admin_provider.dart';
 
 class CreateNewTourScreen extends StatefulWidget {
   const CreateNewTourScreen({super.key});
@@ -19,7 +23,8 @@ class _CreateNewTourScreenState extends State<CreateNewTourScreen> {
   final _priceController     = TextEditingController();
   final _descController      = TextEditingController();
   final _maxPaxController    = TextEditingController();
-
+  
+  File? _imageFile;
   String _selectedCategory = 'Temples';
   int    _selectedDays     = 1;
   bool   _includeHotel     = true;
@@ -29,8 +34,41 @@ class _CreateNewTourScreenState extends State<CreateNewTourScreen> {
 
   final _categories = ['Temples', 'Deserts', 'Nile', 'Beaches', 'Museums', 'Adventure'];
 
+  Future<void> _pickImage() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _imageFile = File(picked.path));
+    }
+  }
+
+  Future<void> _publish() async {
+    final prov = context.read<AdminProvider>();
+    final ok = await prov.createTour({
+      'title': _nameController.text,
+      'location': _locationController.text,
+      'price': double.tryParse(_priceController.text) ?? 0.0,
+      'description': _descController.text,
+      'duration': _selectedDays,
+      'category': _selectedCategory,
+      'max_participants': int.tryParse(_maxPaxController.text) ?? 10,
+    }, _imageFile);
+
+    if (ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tour published successfully! 🎉'), backgroundColor: AppColors.gold),
+      );
+      Navigator.pop(context);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(prov.error ?? 'Failed to create tour')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isLoading = context.watch<AdminProvider>().isLoading;
+
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       appBar: const AmunAppBar(title: 'Create New Tour'),
@@ -40,7 +78,7 @@ class _CreateNewTourScreenState extends State<CreateNewTourScreen> {
 
           // ─── Upload Cover Image ────────────────
           GestureDetector(
-            onTap: () {},
+            onTap: _pickImage,
             child: Container(
               height: 150,
               width: double.infinity,
@@ -48,10 +86,13 @@ class _CreateNewTourScreenState extends State<CreateNewTourScreen> {
                 color: AppColors.bgCard,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                    color: AppColors.gold.withOpacity(0.3),
+                    color: AppColors.gold.withValues(alpha: 0.3),
                     style: BorderStyle.solid),
+                image: _imageFile != null 
+                  ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover)
+                  : null,
               ),
-              child: Column(
+              child: _imageFile == null ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
@@ -67,11 +108,8 @@ class _CreateNewTourScreenState extends State<CreateNewTourScreen> {
                           color: AppColors.gold,
                           fontWeight: FontWeight.bold,
                           fontSize: 14)),
-                  const SizedBox(height: 4),
-                  const Text('JPG, PNG up to 10MB',
-                      style: TextStyle(color: Colors.white38, fontSize: 12)),
                 ],
-              ),
+              ) : null,
             ),
           ),
 
@@ -155,8 +193,9 @@ class _CreateNewTourScreenState extends State<CreateNewTourScreen> {
                     style: TextStyle(color: Colors.white, fontSize: 14)),
                 Row(children: [
                   _counterBtn(Icons.remove, () {
-                    if (_selectedDays > 1)
+                    if (_selectedDays > 1) {
                       setState(() => _selectedDays--);
+                    }
                   }),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -167,8 +206,9 @@ class _CreateNewTourScreenState extends State<CreateNewTourScreen> {
                             fontWeight: FontWeight.bold)),
                   ),
                   _counterBtn(Icons.add, () {
-                    if (_selectedDays < 30)
+                    if (_selectedDays < 30) {
                       setState(() => _selectedDays++);
+                    }
                   }),
                 ]),
               ],
@@ -265,15 +305,8 @@ class _CreateNewTourScreenState extends State<CreateNewTourScreen> {
           Expanded(
             child: AmunButton(
               label: 'Publish Tour',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Tour published successfully! 🎉'),
-                    backgroundColor: AppColors.gold,
-                  ),
-                );
-                Navigator.pop(context);
-              },
+              onTap: _publish,
+              isLoading: isLoading,
               icon: Icons.publish_outlined,
             ),
           ),
@@ -309,7 +342,7 @@ class _CreateNewTourScreenState extends State<CreateNewTourScreen> {
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppColors.gold,
+          activeThumbColor: AppColors.gold,
         ),
       ],
     );

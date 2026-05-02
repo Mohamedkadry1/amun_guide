@@ -1,10 +1,12 @@
 // 📁 lib/screens/admin/manage_tours_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_assets.dart';
 import '../../core/widgets/amun_app_bar.dart';
 import '../../core/widgets/amun_filter_chip.dart';
+import '../../providers/admin_provider.dart';
+import '../../data/models/tour_model.dart';
 
 class ManageToursScreen extends StatefulWidget {
   const ManageToursScreen({super.key});
@@ -17,40 +19,27 @@ class _ManageToursScreenState extends State<ManageToursScreen> {
   int _activeFilter = 0;
   final _filters = ['All', 'Active', 'Draft', 'Archived'];
 
-  final List<Map<String, dynamic>> _tours = [
-    {
-      'img': AppAssets.pyramids, 'name': 'Giza Pyramids Day Tour',
-      'location': 'Cairo', 'price': '\$150', 'days': 1,
-      'bookings': 24, 'rating': '4.9', 'status': 'Active',
-    },
-    {
-      'img': AppAssets.karnak, 'name': 'Luxor & Aswan Adventure',
-      'location': 'Luxor', 'price': '\$450', 'days': 3,
-      'bookings': 18, 'rating': '4.8', 'status': 'Active',
-    },
-    {
-      'img': AppAssets.nileCruise, 'name': 'Nile Cruise 3 Days',
-      'location': 'Luxor → Aswan', 'price': '\$350', 'days': 3,
-      'bookings': 12, 'rating': '4.9', 'status': 'Active',
-    },
-    {
-      'img': AppAssets.siwa, 'name': 'Siwa Oasis Adventure',
-      'location': 'Siwa', 'price': '\$280', 'days': 2,
-      'bookings': 0, 'rating': '-', 'status': 'Draft',
-    },
-    {
-      'img': AppAssets.abuSimbel, 'name': 'Abu Simbel Day Trip',
-      'location': 'Aswan', 'price': '\$200', 'days': 1,
-      'bookings': 8, 'rating': '4.7', 'status': 'Archived',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AdminProvider>().loadTours();
+    });
+  }
 
-  List<Map<String, dynamic>> get _filtered => _activeFilter == 0
-      ? _tours
-      : _tours.where((t) => t['status'] == _filters[_activeFilter]).toList();
+  List<TourModel> _getFiltered(List<TourModel> tours) {
+    if (_activeFilter == 0) return tours;
+    // For now, let's assume status might be missing or different in API
+    // We'll just filter by 'active' if selected
+    if (_activeFilter == 1) return tours; 
+    return [];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final prov = context.watch<AdminProvider>();
+    final filtered = _getFiltered(prov.tours);
+
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       appBar: AmunAppBar(
@@ -63,7 +52,6 @@ class _ManageToursScreenState extends State<ManageToursScreen> {
         ],
       ),
       body: Column(children: [
-
         // ─── Filters ────────────────────────────
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -83,25 +71,22 @@ class _ManageToursScreenState extends State<ManageToursScreen> {
 
         // ─── List ────────────────────────────────
         Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            itemCount: _filtered.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (_, i) => _tourCard(_filtered[i], context),
-          ),
+          child: prov.isLoading && prov.tours.isEmpty
+            ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+            : filtered.isEmpty
+                ? const Center(child: Text('No tours found', style: TextStyle(color: Colors.white38)))
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (_, i) => _tourCard(filtered[i], context),
+                  ),
         ),
       ]),
     );
   }
 
-  Widget _tourCard(Map<String, dynamic> t, BuildContext context) {
-    final status = t['status'] as String;
-    Color statusColor = status == 'Active'
-        ? Colors.green
-        : status == 'Draft'
-        ? AppColors.gold
-        : Colors.white38;
-
+  Widget _tourCard(TourModel t, BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.bgCard,
@@ -109,39 +94,17 @@ class _ManageToursScreenState extends State<ManageToursScreen> {
         border: Border.all(color: Colors.white10),
       ),
       child: Column(children: [
-
-        // Image + overlay
-        Stack(children: [
-          ClipRRect(
-            borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(16)),
-            child: SizedBox(
-              height: 120, width: double.infinity,
-              child: Image.asset(t['img'], fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                      color: AppColors.bgInput,
-                      child: const Icon(Icons.image,
-                          color: Colors.white24, size: 40))),
-            ),
+        // Image
+        ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          child: SizedBox(
+            height: 120, width: double.infinity,
+            child: t.coverImage != null
+              ? Image.network(t.coverImage!, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _placeholder())
+              : _placeholder(),
           ),
-          Positioned(
-            top: 10, right: 10,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: statusColor.withOpacity(0.5)),
-              ),
-              child: Text(status,
-                  style: TextStyle(
-                      color: statusColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ]),
+        ),
 
         // Info
         Padding(
@@ -153,13 +116,13 @@ class _ManageToursScreenState extends State<ManageToursScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(t['name'],
+                    child: Text(t.title,
                         style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 14)),
                   ),
-                  Text(t['price'],
+                  Text(t.displayPrice,
                       style: const TextStyle(
                           color: AppColors.gold,
                           fontWeight: FontWeight.bold,
@@ -168,26 +131,9 @@ class _ManageToursScreenState extends State<ManageToursScreen> {
               ),
               const SizedBox(height: 6),
               Row(children: [
-                const Icon(Icons.location_on_outlined,
-                    color: Colors.white38, size: 13),
+                const Icon(Icons.location_on_outlined, color: Colors.white38, size: 13),
                 const SizedBox(width: 3),
-                Text(t['location'],
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 12)),
-                const SizedBox(width: 12),
-                const Icon(Icons.calendar_today_outlined,
-                    color: Colors.white38, size: 13),
-                const SizedBox(width: 3),
-                Text('${t['days']}D',
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 12)),
-                const SizedBox(width: 12),
-                const Icon(Icons.people_outline,
-                    color: Colors.white38, size: 13),
-                const SizedBox(width: 3),
-                Text('${t['bookings']} bookings',
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 12)),
+                Text(t.location, style: const TextStyle(color: Colors.white38, fontSize: 12)),
               ]),
               const SizedBox(height: 12),
               const Divider(color: Colors.white10, height: 1),
@@ -195,31 +141,9 @@ class _ManageToursScreenState extends State<ManageToursScreen> {
 
               // Actions
               Row(children: [
-                _actionBtn(
-                  Icons.edit_outlined, 'Edit', Colors.blueAccent,
-                      () => Navigator.pushNamed(context, '/create-tour'),
-                ),
+                _actionBtn(Icons.edit_outlined, 'Edit', Colors.blueAccent, () {}),
                 const SizedBox(width: 8),
-                if (status == 'Active')
-                  _actionBtn(
-                    Icons.archive_outlined, 'Archive', Colors.white38,
-                        () => setState(() => t['status'] = 'Archived'),
-                  ),
-                if (status == 'Draft')
-                  _actionBtn(
-                    Icons.publish_outlined, 'Publish', Colors.green,
-                        () => setState(() => t['status'] = 'Active'),
-                  ),
-                if (status == 'Archived')
-                  _actionBtn(
-                    Icons.unarchive_outlined, 'Restore', AppColors.gold,
-                        () => setState(() => t['status'] = 'Active'),
-                  ),
-                const SizedBox(width: 8),
-                _actionBtn(
-                  Icons.delete_outline, 'Delete', Colors.red,
-                      () => _confirmDelete(context, t),
-                ),
+                _actionBtn(Icons.delete_outline, 'Delete', Colors.red, () => _confirmDelete(context, t)),
               ]),
             ],
           ),
@@ -228,52 +152,48 @@ class _ManageToursScreenState extends State<ManageToursScreen> {
     );
   }
 
-  Widget _actionBtn(
-      IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _placeholder() => Container(
+    color: AppColors.bgInput,
+    child: const Icon(Icons.image, color: Colors.white24, size: 40),
+  );
+
+  Widget _actionBtn(IconData icon, String label, Color color, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Row(children: [
           Icon(icon, color: color, size: 14),
           const SizedBox(width: 5),
-          Text(label,
-              style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600)),
+          Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
         ]),
       ),
     );
   }
 
-  void _confirmDelete(BuildContext context, Map<String, dynamic> t) {
+  void _confirmDelete(BuildContext context, TourModel t) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.bgCard,
-        title: const Text('Delete Tour',
-            style: TextStyle(color: Colors.white)),
-        content: Text('Are you sure you want to delete "${t['name']}"?',
-            style: const TextStyle(color: Colors.white54)),
+        title: const Text('Delete Tour', style: TextStyle(color: Colors.white)),
+        content: Text('Are you sure you want to delete "${t.title}"?', style: const TextStyle(color: Colors.white54)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: Colors.white38)),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
           ),
           TextButton(
             onPressed: () {
-              setState(() => _tours.remove(t));
+              // TODO: context.read<AdminProvider>().deleteTour(t.id);
               Navigator.pop(context);
             },
-            child: const Text('Delete',
-                style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

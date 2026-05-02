@@ -24,7 +24,7 @@ class WelcomeScreen extends StatelessWidget {
             ),
           ),
           // طبقة شفافة سودة عشان الكلام يبان
-          Container(color: Colors.black.withOpacity(0.3)),
+          Container(color: Colors.black.withValues(alpha: 0.3)),
 
           // 2. المحتوى فوق الخلفية
           SafeArea(
@@ -82,7 +82,7 @@ class WelcomeScreen extends StatelessWidget {
                   context,
                   label: 'Guide',
                   icon: Icons.map,
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   isDarkText: false,
                   onTap: () {
                     // ✅ Guide → Login
@@ -145,7 +145,7 @@ class WelcomeScreen extends StatelessWidget {
             CircleAvatar(
               radius: 30,
               backgroundColor:
-              isDarkText ? Colors.black.withOpacity(0.8) : Colors.white,
+              isDarkText ? Colors.black.withValues(alpha: 0.8) : Colors.white,
               child: Icon(
                 icon,
                 color: isDarkText ? const Color(0xFFE5B54F) : Colors.black,

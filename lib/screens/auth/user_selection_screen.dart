@@ -82,7 +82,7 @@ class _UserSelectionScreenState extends State<UserSelectionScreen> {
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? const Color(0xFFC5A358).withOpacity(0.1)
+                          ? const Color(0xFFC5A358).withValues(alpha: 0.1)
                           : const Color(0xFF2A241F),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
