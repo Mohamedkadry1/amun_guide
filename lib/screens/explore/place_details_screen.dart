@@ -1,8 +1,10 @@
 // 📁 lib/screens/explore/place_details_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_text_styles.dart';
+import '../../data/models/place_model.dart';
+import '../../providers/place_provider.dart';
 
 class PlaceDetailsScreen extends StatefulWidget {
   const PlaceDetailsScreen({super.key});
@@ -14,9 +16,28 @@ class PlaceDetailsScreen extends StatefulWidget {
 class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
   bool _isSaved = false;
   bool _isExpanded = false;
+  final _commentController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final place = ModalRoute.of(context)!.settings.arguments as PlaceModel;
+      context.read<PlaceProvider>().loadComments(place.id);
+    });
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final place = ModalRoute.of(context)!.settings.arguments as PlaceModel;
+    final placeProv = context.watch<PlaceProvider>();
+
     return Scaffold(
       backgroundColor: const Color(0xFF1A1208),
       body: Stack(
@@ -77,14 +98,13 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                     fit: StackFit.expand,
                     children: [
                       // صورة المكان
-                      Image.asset(
-                        'assets/images/karnak.jpg',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: const Color(0xFF2A1F0E),
-                          child: const Icon(Icons.image, color: Colors.white24, size: 80),
-                        ),
-                      ),
+                      place.image != null
+                          ? Image.network(
+                              place.image!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _placeholder(),
+                            )
+                          : _placeholder(),
                       // gradient في الأسفل
                       const DecoratedBox(
                         decoration: BoxDecoration(
@@ -108,9 +128,9 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                   delegate: SliverChildListDelegate([
 
                     // ── الاسم والموقع والتقييم ──────────────
-                    const Text(
-                      'Karnak Temple Complex',
-                      style: TextStyle(
+                    Text(
+                      place.title,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
@@ -124,7 +144,7 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                       children: const [
                         Icon(Icons.location_on, color: AppColors.gold, size: 16),
                         SizedBox(width: 4),
-                        Text('Luxor, Egypt', style: TextStyle(color: Colors.white54, fontSize: 13)),
+                        Text('Egypt', style: TextStyle(color: Colors.white54, fontSize: 13)),
                         SizedBox(width: 8),
                         Text('•', style: TextStyle(color: Colors.white24)),
                         SizedBox(width: 8),
@@ -139,15 +159,15 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                         // نجوم
                         Row(
                           children: List.generate(5, (i) => Icon(
-                            i < 4 ? Icons.star : Icons.star_half,
+                            i < place.rating.floor() ? Icons.star : (i < place.rating ? Icons.star_half : Icons.star_border),
                             color: AppColors.gold,
                             size: 18,
                           )),
                         ),
                         const SizedBox(width: 8),
-                        const Text(
-                          '4.8',
-                          style: TextStyle(
+                        Text(
+                          place.displayRating,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -155,7 +175,7 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                         ),
                         const SizedBox(width: 6),
                         const Text(
-                          '(3,420 reviews)',
+                          '(Verified Review)',
                           style: TextStyle(color: Colors.white38, fontSize: 13),
                         ),
                       ],
@@ -169,7 +189,7 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF221A0A),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.gold.withOpacity(0.35)),
+                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,7 +200,7 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                               Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: AppColors.gold.withOpacity(0.15),
+                                  color: AppColors.gold.withValues(alpha: 0.15),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(Icons.auto_awesome, color: AppColors.gold, size: 16),
@@ -234,7 +254,7 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'The Karnak Temple Complex, commonly known as Karnak, comprises a vast mix of decayed temples, chapels, pylons, and other buildings near Luxor, Egypt. Construction at the complex began during the reign of Senusret I in the Middle Kingdom and continued into the Ptolemaic period.',
+                      place.description,
                       style: const TextStyle(color: Colors.white54, fontSize: 14, height: 1.7),
                       maxLines: _isExpanded ? null : 4,
                       overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
@@ -317,7 +337,7 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                     const SizedBox(height: 24),
 
                     // ── Reviews ─────────────────────────────
-                    _buildReviewsSection(),
+                    _buildReviewsSection(placeProv),
 
                     const SizedBox(height: 24),
 
@@ -372,7 +392,7 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                     child: OutlinedButton(
                       onPressed: () => Navigator.pushNamed(context, '/ai-chat'),
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.gold.withOpacity(0.5)),
+                        side: BorderSide(color: AppColors.gold.withValues(alpha: 0.5)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                       ),
@@ -413,8 +433,13 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
     );
   }
 
+  Widget _placeholder() => Container(
+        color: const Color(0xFF2A1F0E),
+        child: const Icon(Icons.image, color: Colors.white24, size: 80),
+      );
+
   // ── Reviews Section ────────────────────────────────────
-  Widget _buildReviewsSection() {
+  Widget _buildReviewsSection(PlaceProvider prov) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -425,69 +450,99 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Reviews',
-            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 14),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // الرقم الكبير
-              Column(
-                children: [
-                  const Text(
-                    '4.8',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 42,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Row(
-                    children: List.generate(5, (i) => Icon(
-                      i < 4 ? Icons.star : Icons.star_half,
-                      color: AppColors.gold,
-                      size: 14,
-                    )),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    '3,420 reviews',
-                    style: TextStyle(color: Colors.white38, fontSize: 11),
-                  ),
-                ],
+              const Text(
+                'Reviews',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(width: 20),
-              // شرائط التقييم
-              Expanded(
-                child: Column(
-                  children: List.generate(5, (i) {
-                    final vals = [0.85, 0.65, 0.3, 0.15, 0.05];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(
-                        children: [
-                          Text('${5 - i}', style: const TextStyle(color: Colors.white38, fontSize: 11)),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: vals[i],
-                                backgroundColor: Colors.white10,
-                                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
-                                minHeight: 6,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ),
+              Text(
+                '${prov.comments.length} comments',
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
             ],
           ),
+          const SizedBox(height: 14),
+          
+          // Add Comment Input
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _commentController,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Add a comment...',
+                    hintStyle: const TextStyle(color: Colors.white24),
+                    filled: true,
+                    fillColor: Colors.black26,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () {
+                  if (_commentController.text.trim().isEmpty) return;
+                  final place = ModalRoute.of(context)!.settings.arguments as PlaceModel;
+                  prov.addComment(place.id, _commentController.text.trim());
+                  _commentController.clear();
+                },
+                icon: const Icon(Icons.send, color: AppColors.gold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          if (prov.isLoading)
+            const Center(child: CircularProgressIndicator(color: AppColors.gold))
+          else if (prov.comments.isEmpty)
+            const Center(
+              child: Text('No comments yet', style: TextStyle(color: Colors.white24)),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: prov.comments.length,
+              separatorBuilder: (_, __) => const Divider(color: Colors.white10, height: 24),
+              itemBuilder: (_, i) {
+                final comment = prov.comments[i];
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: AppColors.gold.withValues(alpha: 0.1),
+                      backgroundImage: comment.userImage != null ? NetworkImage(comment.userImage!) : null,
+                      child: comment.userImage == null ? const Icon(Icons.person, color: AppColors.gold, size: 18) : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            comment.userName ?? 'User',
+                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            comment.content,
+                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
         ],
       ),
     );

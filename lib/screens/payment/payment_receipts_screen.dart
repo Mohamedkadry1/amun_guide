@@ -1,11 +1,16 @@
 // 📁 lib/screens/payment/payment_receipts_screen.dart
 
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_assets.dart';
 import '../../core/widgets/amun_app_bar.dart';
 import '../../core/widgets/amun_button.dart';
 import '../../core/widgets/amun_filter_chip.dart';
+import '../../providers/payment_provider.dart';
+import '../../data/models/payment_model.dart';
+
 
 class PaymentReceiptsScreen extends StatefulWidget {
   const PaymentReceiptsScreen({super.key});
@@ -18,49 +23,25 @@ class _PaymentReceiptsScreenState extends State<PaymentReceiptsScreen> {
   int _activeFilter = 0;
   final _filters = ['All', 'Pending', 'Approved', 'Rejected'];
 
-  final _receipts = [
-    _Receipt(
-      id: 'TRX-88392',
-      tour: 'Luxor & Aswan Adventure',
-      amount: '\$450.00',
-      date: '12 Oct 2024',
-      image: AppAssets.receipt1,
-      status: 'Pending',
-    ),
-    _Receipt(
-      id: 'TRX-77281',
-      tour: 'Giza Pyramids Day Tour',
-      amount: '\$150.00',
-      date: '05 Oct 2024',
-      image: AppAssets.receipt2,
-      status: 'Approved',
-    ),
-    _Receipt(
-      id: 'TRX-66170',
-      tour: 'Nile Cruise 3 Days',
-      amount: '\$350.00',
-      date: '28 Sep 2024',
-      image: AppAssets.receipt3,
-      status: 'Approved',
-    ),
-    _Receipt(
-      id: 'TRX-55069',
-      tour: 'Siwa Oasis Adventure',
-      amount: '\$280.00',
-      date: '20 Sep 2024',
-      image: AppAssets.receipt4,
-      status: 'Rejected',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PaymentProvider>().loadMyPayments();
+    });
+  }
 
-  List<_Receipt> get _filtered => _activeFilter == 0
-      ? _receipts
-      : _receipts
-      .where((r) => r.status == _filters[_activeFilter])
-      .toList();
+  List<PaymentModel> _getFiltered(List<PaymentModel> payments) {
+    if (_activeFilter == 0) return payments;
+    final status = _filters[_activeFilter].toLowerCase();
+    return payments.where((p) => p.status.toLowerCase() == status).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final prov = context.watch<PaymentProvider>();
+    final filtered = _getFiltered(prov.payments);
+
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       appBar: const AmunAppBar(title: 'Payment Receipts'),
@@ -73,6 +54,7 @@ class _PaymentReceiptsScreenState extends State<PaymentReceiptsScreen> {
             label: 'Upload New Receipt',
             onTap: () => _showUploadSheet(context),
             icon: Icons.upload_file_outlined,
+            isLoading: prov.isLoading,
           ),
         ),
 
@@ -100,20 +82,22 @@ class _PaymentReceiptsScreenState extends State<PaymentReceiptsScreen> {
 
         // ─── List ─────────────────────────────────
         Expanded(
-          child: _filtered.isEmpty
-              ? _buildEmpty()
-              : ListView.separated(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            itemCount: _filtered.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (_, i) => _receiptCard(_filtered[i], context),
-          ),
+          child: prov.isLoading && prov.payments.isEmpty
+            ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+            : filtered.isEmpty
+                ? _buildEmpty()
+                : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              itemCount: filtered.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (_, i) => _receiptCard(filtered[i], context),
+            ),
         ),
       ]),
     );
   }
 
-  Widget _receiptCard(_Receipt r, BuildContext context) {
+  Widget _receiptCard(PaymentModel p, BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -128,11 +112,10 @@ class _PaymentReceiptsScreenState extends State<PaymentReceiptsScreen> {
           borderRadius: BorderRadius.circular(10),
           child: SizedBox(
             width: 60, height: 60,
-            child: Image.asset(r.image, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                    color: AppColors.bgInput,
-                    child: const Icon(Icons.receipt_long,
-                        color: Colors.white24, size: 28))),
+            child: p.receiptImage != null
+              ? Image.network(p.receiptImage!, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _placeholder())
+              : _placeholder(),
           ),
         ),
 
@@ -141,7 +124,7 @@ class _PaymentReceiptsScreenState extends State<PaymentReceiptsScreen> {
         // Info
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(r.tour,
+            Text('Payment #${p.id}',
                 style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -149,11 +132,11 @@ class _PaymentReceiptsScreenState extends State<PaymentReceiptsScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
             const SizedBox(height: 3),
-            Text('ID: ${r.id}',
+            Text(p.payableType.replaceAll('_', ' '),
                 style: const TextStyle(
                     color: Colors.white38, fontSize: 11)),
             const SizedBox(height: 3),
-            Text(r.date,
+            Text(p.createdAt ?? '',
                 style: const TextStyle(
                     color: Colors.white38, fontSize: 11)),
           ]),
@@ -161,33 +144,42 @@ class _PaymentReceiptsScreenState extends State<PaymentReceiptsScreen> {
 
         // Amount + Status
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(r.amount,
+          Text('\$${p.amount}',
               style: const TextStyle(
                   color: AppColors.gold,
                   fontWeight: FontWeight.bold,
                   fontSize: 14)),
           const SizedBox(height: 6),
-          _statusBadge(r.status),
+          _statusBadge(p.status),
         ]),
       ]),
     );
   }
 
+  Widget _placeholder() => Container(
+    color: AppColors.bgInput,
+    child: const Icon(Icons.receipt_long, color: Colors.white24, size: 28),
+  );
+
   Widget _statusBadge(String status) {
     Color color;
-    switch (status) {
-      case 'Approved': color = Colors.green; break;
-      case 'Rejected': color = Colors.red;   break;
-      default:         color = AppColors.gold;
+    final s = status.toLowerCase();
+    if (s == 'approved' || s == 'completed') {
+      color = Colors.green;
+    } else if (s == 'rejected' || s == 'failed') {
+      color = Colors.red;
+    } else {
+      color = AppColors.gold;
     }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
-      child: Text(status,
+      child: Text(status.toUpperCase(),
           style: TextStyle(
               color: color,
               fontSize: 11,
@@ -232,20 +224,41 @@ class _PaymentReceiptsScreenState extends State<PaymentReceiptsScreen> {
                   fontSize: 18,
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
-          _uploadOption(Icons.camera_alt_outlined, 'Take Photo'),
+          _uploadOption(Icons.camera_alt_outlined, 'Take Photo', () => _pickAndUpload(ImageSource.camera)),
           const SizedBox(height: 12),
-          _uploadOption(Icons.photo_library_outlined, 'Choose from Gallery'),
-          const SizedBox(height: 12),
-          _uploadOption(Icons.file_present_outlined, 'Upload File (PDF)'),
+          _uploadOption(Icons.photo_library_outlined, 'Choose from Gallery', () => _pickAndUpload(ImageSource.gallery)),
           const SizedBox(height: 24),
         ]),
       ),
     );
   }
 
-  Widget _uploadOption(IconData icon, String label) {
+  Future<void> _pickAndUpload(ImageSource source) async {
+    Navigator.pop(context);
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source);
+
+    if (pickedFile != null) {
+      if (!mounted) return;
+      final file = File(pickedFile.path);
+      final ok = await context.read<PaymentProvider>().uploadReceipt(
+        amount: 450.0,
+        payableType: 'tour_bookings',
+        payableId: 1, // Mock
+        imageFile: file,
+      );
+      
+      if (ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Receipt uploaded successfully!')),
+        );
+      }
+    }
+  }
+
+  Widget _uploadOption(IconData icon, String label, VoidCallback onTap) {
     return GestureDetector(
-      onTap: () {},
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -267,14 +280,4 @@ class _PaymentReceiptsScreenState extends State<PaymentReceiptsScreen> {
   }
 }
 
-class _Receipt {
-  final String id, tour, amount, date, image, status;
-  const _Receipt({
-    required this.id,
-    required this.tour,
-    required this.amount,
-    required this.date,
-    required this.image,
-    required this.status,
-  });
-}
+

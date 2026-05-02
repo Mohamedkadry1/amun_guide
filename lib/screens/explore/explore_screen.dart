@@ -1,11 +1,10 @@
-// 📁 lib/screens/explore/explore_screen.dart
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_assets.dart';
 import '../../core/widgets/amun_filter_chip.dart';
-import '../../core/widgets/place_card.dart';
 import '../../core/widgets/section_header.dart';
+import '../../data/models/place_model.dart';
+import '../../providers/place_provider.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -21,29 +20,35 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   final _filters = ['All', 'Temples', 'Deserts', 'Nile', 'Beaches', 'Museums'];
 
-  final _places = [
-    {'img': AppAssets.pyramids,   'name': 'Giza Pyramids',   'loc': 'Cairo, Egypt',      'rating': '4.9', 'price': '\$150/pax', 'cat': 'Temples'},
-    {'img': AppAssets.karnak,     'name': 'Karnak Temple',   'loc': 'Luxor, Egypt',      'rating': '4.8', 'price': '\$250/pax', 'cat': 'Temples'},
-    {'img': AppAssets.abuSimbel,  'name': 'Abu Simbel',      'loc': 'Aswan, Egypt',      'rating': '4.8', 'price': '\$200/pax', 'cat': 'Temples'},
-    {'img': AppAssets.siwa,       'name': 'Siwa Oasis',      'loc': 'Siwa, Egypt',       'rating': '4.7', 'price': '\$180/pax', 'cat': 'Deserts'},
-    {'img': AppAssets.nileSunset, 'name': 'Nile Cruise',     'loc': 'Luxor → Aswan',    'rating': '4.9', 'price': '\$350/pax', 'cat': 'Nile'},
-    {'img': AppAssets.alexandria, 'name': 'Alexandria',      'loc': 'Alexandria, Egypt', 'rating': '4.6', 'price': '\$120/pax', 'cat': 'Beaches'},
-    {'img': AppAssets.museum,     'name': 'Egyptian Museum', 'loc': 'Cairo, Egypt',      'rating': '4.7', 'price': '\$80/pax',  'cat': 'Museums'},
-    {'img': AppAssets.valley,     'name': 'Valley of Kings', 'loc': 'Luxor, Egypt',      'rating': '4.8', 'price': '\$160/pax', 'cat': 'Temples'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PlaceProvider>().loadAllPlaces();
+    });
+  }
 
-  List<Map<String, dynamic>> get _filtered => _activeFilter == 0
-      ? _places
-      : _places.where((p) => p['cat'] == _filters[_activeFilter]).toList();
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String q) {
+    context.read<PlaceProvider>().search(q);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final placeProv = context.watch<PlaceProvider>();
+    final places = placeProv.places;
+
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       body: SafeArea(
         child: Column(children: [
 
-          // ─── Header ─────────────────────────────
+          // ─── Header ────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: Column(children: [
@@ -54,7 +59,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold)),
-                // Grid / List toggle
                 Container(
                   decoration: BoxDecoration(
                     color: AppColors.bgCard,
@@ -72,7 +76,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
               // Search
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: AppColors.bgInput,
                   borderRadius: BorderRadius.circular(30),
@@ -84,10 +89,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   Expanded(
                     child: TextField(
                       controller: _searchController,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      onChanged: _onSearchChanged,
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 14),
                       decoration: const InputDecoration(
                         hintText: 'Search places, tours...',
-                        hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                        hintStyle:
+                            TextStyle(color: Colors.white38, fontSize: 14),
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
@@ -100,7 +108,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       color: AppColors.gold,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.tune, color: Colors.black, size: 16),
+                    child:
+                        const Icon(Icons.tune, color: Colors.black, size: 16),
                   ),
                 ]),
               ),
@@ -111,63 +120,88 @@ class _ExploreScreenState extends State<ExploreScreen> {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: List.generate(_filters.length, (i) => AmunFilterChip(
-                    label: _filters[i],
-                    isActive: _activeFilter == i,
-                    onTap: () => setState(() => _activeFilter = i),
-                  )),
+                  children: List.generate(
+                    _filters.length,
+                    (i) => AmunFilterChip(
+                      label: _filters[i],
+                      isActive: _activeFilter == i,
+                      onTap: () => setState(() => _activeFilter = i),
+                    ),
+                  ),
                 ),
               ),
 
               const SizedBox(height: 14),
 
-              SectionHeader(title: '${_filtered.length} Places Found'),
+              SectionHeader(
+                  title: placeProv.isLoading
+                      ? 'Loading...'
+                      : '${places.length} Places Found'),
             ]),
           ),
 
           const SizedBox(height: 12),
 
-          // ─── Results ────────────────────────────
-          Expanded(
-            child: _isGrid
-                ? GridView.builder(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.78,
-              ),
-              itemCount: _filtered.length,
-              itemBuilder: (_, i) => PlaceCard(
-                image: _filtered[i]['img'],
-                name: _filtered[i]['name'],
-                location: _filtered[i]['loc'],
-                rating: _filtered[i]['rating'],
-                price: _filtered[i]['price'],
-                category: _filtered[i]['cat'],
-                style: PlaceCardStyle.grid,
-                onTap: () => Navigator.pushNamed(context, '/place-details'),
-                onSave: () {},
+          // ─── Results ───────────────────────────────────────────────
+          if (placeProv.isLoading)
+            const Expanded(
+                child: Center(
+                    child: CircularProgressIndicator(color: AppColors.gold)))
+          else if (placeProv.error != null)
+            Expanded(
+              child: Center(
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.wifi_off,
+                          color: Colors.white38, size: 48),
+                      const SizedBox(height: 12),
+                      Text(placeProv.error!,
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 14)),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () =>
+                            context.read<PlaceProvider>().loadAllPlaces(),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.gold),
+                        child: const Text('Retry',
+                            style: TextStyle(color: Colors.black)),
+                      ),
+                    ]),
               ),
             )
-                : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              itemCount: _filtered.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (_, i) => PlaceCard(
-                image: _filtered[i]['img'],
-                name: _filtered[i]['name'],
-                location: _filtered[i]['loc'],
-                rating: _filtered[i]['rating'],
-                price: _filtered[i]['price'],
-                category: _filtered[i]['cat'],
-                style: PlaceCardStyle.list,
-                onTap: () => Navigator.pushNamed(context, '/place-details'),
-                onSave: () {},
-              ),
+          else if (places.isEmpty)
+            const Expanded(
+              child: Center(
+                  child: Text('No places found',
+                      style: TextStyle(color: Colors.white38))),
+            )
+          else
+            Expanded(
+              child: _isGrid
+                  ? GridView.builder(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                        childAspectRatio: 0.78,
+                      ),
+                      itemCount: places.length,
+                      itemBuilder: (_, i) =>
+                          _PlaceGridCard(place: places[i], context: context),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                      itemCount: places.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: 12),
+                      itemBuilder: (_, i) =>
+                          _PlaceListCard(place: places[i], context: context),
+                    ),
             ),
-          ),
         ]),
       ),
     );
@@ -183,8 +217,149 @@ class _ExploreScreenState extends State<ExploreScreen> {
           color: active ? AppColors.gold : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, color: active ? Colors.black : Colors.white38, size: 18),
+        child: Icon(icon,
+            color: active ? Colors.black : Colors.white38, size: 18),
       ),
     );
   }
 }
+
+// ── Grid card ───────────────────────────────────────────────────────────
+class _PlaceGridCard extends StatelessWidget {
+  final PlaceModel place;
+  final BuildContext context;
+  const _PlaceGridCard({required this.place, required this.context});
+
+  @override
+  Widget build(BuildContext _) {
+    return GestureDetector(
+      onTap: () =>
+          Navigator.pushNamed(context, '/place-details', arguments: place),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
+              child: SizedBox(
+                width: double.infinity,
+                child: place.image != null
+                    ? Image.network(place.image!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _placeholder())
+                    : _placeholder(),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(place.title,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 4),
+                  Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(children: [
+                          const Icon(Icons.star,
+                              color: AppColors.gold, size: 12),
+                          const SizedBox(width: 3),
+                          Text(place.displayRating,
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 11)),
+                        ]),
+                        Text(place.displayPrice,
+                            style: const TextStyle(
+                                color: AppColors.gold,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold)),
+                      ]),
+                ]),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+      color: AppColors.goldDim,
+      child: const Icon(Icons.image_outlined, color: AppColors.gold));
+}
+
+// ── List card ───────────────────────────────────────────────────────────
+class _PlaceListCard extends StatelessWidget {
+  final PlaceModel place;
+  final BuildContext context;
+  const _PlaceListCard({required this.place, required this.context});
+
+  @override
+  Widget build(BuildContext _) {
+    return GestureDetector(
+      onTap: () =>
+          Navigator.pushNamed(context, '/place-details', arguments: place),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: Row(children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: SizedBox(
+              width: 80,
+              height: 80,
+              child: place.image != null
+                  ? Image.network(place.image!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder())
+                  : _placeholder(),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+              child:
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(place.title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Row(children: [
+              const Icon(Icons.star, color: AppColors.gold, size: 13),
+              const SizedBox(width: 4),
+              Text(place.displayRating,
+                  style:
+                      const TextStyle(color: Colors.white54, fontSize: 13)),
+            ]),
+            const SizedBox(height: 6),
+            Text(place.displayPrice,
+                style: const TextStyle(
+                    color: AppColors.gold,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold)),
+          ])),
+        ]),
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+      color: AppColors.goldDim,
+      child: const Icon(Icons.place, color: AppColors.gold));
+}
+

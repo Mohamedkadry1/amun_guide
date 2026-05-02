@@ -136,9 +136,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              itemCount: _posts.length,
+              itemCount: _filtered.length,
               separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (_, i) => _postCard(_posts[i], i, context),
+              itemBuilder: (_, i) => _postCard(_filtered[i], i, context),
             ),
           ),
         ]),
@@ -189,10 +189,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: post.tagColor.withOpacity(0.12),
+                  color: post.tagColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                      color: post.tagColor.withOpacity(0.3)),
+                      color: post.tagColor.withValues(alpha: 0.3)),
                 ),
                 child: Text(post.tag,
                     style: TextStyle(

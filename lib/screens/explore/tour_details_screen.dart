@@ -1,7 +1,10 @@
 // 📁 lib/screens/explore/tour_details_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../data/models/tour_model.dart';
+import '../../providers/booking_provider.dart';
 
 class TourDetailsScreen extends StatefulWidget {
   const TourDetailsScreen({super.key});
@@ -12,27 +15,12 @@ class TourDetailsScreen extends StatefulWidget {
 
 class _TourDetailsScreenState extends State<TourDetailsScreen> {
   bool _isSaved = false;
-
-  final List<Map<String, dynamic>> _places = [
-    {
-      'img': 'assets/images/karnak.jpg',
-      'name': 'Karnak Temple',
-      'desc': 'The largest religious building ever constructed.',
-    },
-    {
-      'img': 'assets/images/valley.jpg',
-      'name': 'Valley of the Kings',
-      'desc': 'Royal burial ground for pharaohs such as Tutankhamun.',
-    },
-    {
-      'img': 'assets/images/philae.jpg',
-      'name': 'Philae Temple',
-      'desc': 'Island temple complex dedicated to the goddess Isis.',
-    },
-  ];
+  int _participants = 1;
 
   @override
   Widget build(BuildContext context) {
+    final tour = ModalRoute.of(context)!.settings.arguments as TourModel;
+
     return Scaffold(
       backgroundColor: const Color(0xFF1A1208),
       body: Stack(
@@ -79,14 +67,13 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.asset(
-                        'assets/images/nile_cruise.jpg',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: const Color(0xFF2A1F0E),
-                          child: const Icon(Icons.image, color: Colors.white24, size: 80),
-                        ),
-                      ),
+                      tour.coverImage != null
+                          ? Image.network(
+                              tour.coverImage!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _placeholder(),
+                            )
+                          : _placeholder(),
                       // Gradient
                       const DecoratedBox(
                         decoration: BoxDecoration(
@@ -124,25 +111,6 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                           ),
                         ),
                       ),
-                      // Title in AppBar
-                      const Positioned(
-                        top: 0, left: 0, right: 0,
-                        child: SafeArea(
-                          child: Center(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 14),
-                              child: Text(
-                                'Tour Details',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -154,14 +122,14 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
 
-                    // ── العنوان والسعر ──────────────────────
+                    // ── Title and Price ──────────────────────
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'Nile Cruise\nAdventure',
-                            style: TextStyle(
+                            tour.title,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -171,16 +139,16 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
-                          children: const [
+                          children: [
                             Text(
-                              '\$450',
-                              style: TextStyle(
+                              tour.displayPrice,
+                              style: const TextStyle(
                                 color: AppColors.gold,
                                 fontSize: 26,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            Text(
+                            const Text(
                               'per person',
                               style: TextStyle(color: Colors.white38, fontSize: 12),
                             ),
@@ -190,33 +158,33 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // الموقع
+                    // Location
                     Row(
-                      children: const [
-                        Icon(Icons.location_on, color: AppColors.gold, size: 15),
-                        SizedBox(width: 4),
+                      children: [
+                        const Icon(Icons.location_on, color: AppColors.gold, size: 15),
+                        const SizedBox(width: 4),
                         Text(
-                          'Luxor to Aswan, Egypt',
-                          style: TextStyle(color: Colors.white54, fontSize: 13),
+                          tour.location,
+                          style: const TextStyle(color: Colors.white54, fontSize: 13),
                         ),
                       ],
                     ),
                     const SizedBox(height: 14),
 
-                    // التقييم
+                    // Rating
                     Row(
                       children: [
                         Row(
                           children: List.generate(5, (i) => Icon(
-                            i < 4 ? Icons.star : Icons.star_half,
+                            i < (tour.rating ?? 0).floor() ? Icons.star : Icons.star_border,
                             color: AppColors.gold,
                             size: 18,
                           )),
                         ),
                         const SizedBox(width: 8),
-                        const Text(
-                          '4.9',
-                          style: TextStyle(
+                        Text(
+                          tour.displayRating,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -226,7 +194,7 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Based on 128 reviews',
+                      'Verified Tour',
                       style: TextStyle(color: Colors.white38, fontSize: 12),
                     ),
 
@@ -257,9 +225,9 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'Experience the magic of ancient Egypt on a 5-day luxury cruise down the Nile. You will sail from Luxor to Aswan, witnessing the timeless landscapes that have inspired pharaohs for millennia. Visit Karnak Temple, Valley of the Kings, and more with expert guidance from Ahmed.',
-                      style: TextStyle(
+                    Text(
+                      tour.details ?? 'No details available for this tour.',
+                      style: const TextStyle(
                         color: Colors.white54,
                         fontSize: 14,
                         height: 1.7,
@@ -294,7 +262,31 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    ..._places.map((place) => _buildPlaceItem(place)).toList(),
+                    ...tour.places.map((place) => _buildPlaceItem(place)),
+
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Select Participants',
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _participantBtn(Icons.remove, () {
+                          if (_participants > 1) setState(() => _participants--);
+                        }),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            '$_participants',
+                            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        _participantBtn(Icons.add, () {
+                          setState(() => _participants++);
+                        }),
+                      ],
+                    ),
                   ]),
                 ),
               ),
@@ -319,7 +311,7 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () => Navigator.pushNamed(context, '/payment-receipts'),
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.gold.withOpacity(0.5)),
+                        side: BorderSide(color: AppColors.gold.withValues(alpha: 0.5)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
@@ -339,23 +331,39 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                   const SizedBox(width: 12),
                   // Join Tour
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pushNamed(context, '/payment-success'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.gold,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                    child: Consumer<BookingProvider>(
+                      builder: (context, prov, _) => ElevatedButton(
+                        onPressed: prov.isLoading ? null : () async {
+                          final nav = Navigator.of(context);
+                          final messenger = ScaffoldMessenger.of(context);
+                          final ok = await prov.bookTour(tour.id, _participants);
+                          if (!mounted) return;
+                          if (ok) {
+                            nav.pushNamed('/payment-success');
+                          } else {
+                            messenger.showSnackBar(
+                              SnackBar(content: Text(prov.error ?? 'Booking failed')),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.gold,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Join Tour',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
+                        child: prov.isLoading 
+                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                          : const Text(
+                              'Join Tour',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
                       ),
                     ),
                   ),
@@ -364,6 +372,26 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+        color: const Color(0xFF2A1F0E),
+        child: const Icon(Icons.image, color: Colors.white24, size: 80),
+      );
+
+  Widget _participantBtn(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Icon(icon, color: AppColors.gold, size: 20),
       ),
     );
   }
@@ -378,7 +406,7 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
       ),
       child: Row(
         children: [
-          // صورة المرشد
+          // Guide Image
           Container(
             width: 56, height: 56,
             decoration: BoxDecoration(
@@ -386,18 +414,14 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
               border: Border.all(color: AppColors.gold, width: 2),
             ),
             child: ClipOval(
-              child: Image.asset(
-                'assets/images/guide_ahmed.jpg',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: const Color(0xFFE8D5A3),
-                  child: const Icon(Icons.person, color: Colors.brown, size: 30),
-                ),
+              child: Container(
+                color: const Color(0xFFE8D5A3),
+                child: const Icon(Icons.person, color: Colors.brown, size: 30),
               ),
             ),
           ),
           const SizedBox(width: 14),
-          // بيانات المرشد
+          // Guide Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,12 +430,12 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.gold.withOpacity(0.15),
+                    color: AppColors.gold.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Text(
                         '5.0',
                         style: TextStyle(
@@ -435,21 +459,21 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                   ),
                 ),
                 const Text(
-                  'Expert in New Kingdom history...',
+                  'Expert in Ancient History',
                   style: TextStyle(color: Colors.black54, fontSize: 12),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          // زرار المراسلة
+          // Message Button
           Container(
             width: 40, height: 40,
             decoration: const BoxDecoration(
               color: Colors.black,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.stop, color: Colors.white, size: 18),
+            child: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 18),
           ),
         ],
       ),
@@ -457,36 +481,38 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
   }
 
   // ── Place Item ─────────────────────────────────────────
-  Widget _buildPlaceItem(Map<String, dynamic> place) {
+  Widget _buildPlaceItem(dynamic place) {
+    final title = place is Map ? place['title'] : 'Place';
+    final image = place is Map ? place['image'] : null;
+
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/place-details'),
+      onTap: () {},
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         child: Row(
           children: [
-            // صورة المكان
+            // Place Image
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: SizedBox(
                 width: 70, height: 70,
-                child: Image.asset(
-                  place['img'] as String,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: const Color(0xFF2A1F0E),
-                    child: const Icon(Icons.image, color: Colors.white24),
-                  ),
-                ),
+                child: image != null
+                    ? Image.network(
+                        image,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _placeholderItem(),
+                      )
+                    : _placeholderItem(),
               ),
             ),
             const SizedBox(width: 14),
-            // الاسم والوصف
+            // Name and Category
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    place['name'] as String,
+                    title,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 15,
@@ -494,11 +520,9 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    place['desc'] as String,
-                    style: const TextStyle(color: Colors.white38, fontSize: 12, height: 1.4),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  const Text(
+                    'Historical Site',
+                    style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.4),
                   ),
                 ],
               ),
@@ -509,4 +533,9 @@ class _TourDetailsScreenState extends State<TourDetailsScreen> {
       ),
     );
   }
+
+  Widget _placeholderItem() => Container(
+        color: const Color(0xFF2A1F0E),
+        child: const Icon(Icons.image, color: Colors.white24),
+      );
 }

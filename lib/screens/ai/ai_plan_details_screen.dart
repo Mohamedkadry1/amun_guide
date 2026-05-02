@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/widgets/amun_app_bar.dart';
 import '../../core/widgets/amun_button.dart';
+import '../../data/models/plan_model.dart';
 
 class AiPlanDetailsScreen extends StatelessWidget {
   const AiPlanDetailsScreen({super.key});
@@ -33,10 +34,13 @@ class AiPlanDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final arg = ModalRoute.of(context)?.settings.arguments;
+    final plan = arg is PlanModel ? arg : null;
+
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       appBar: AmunAppBar(
-        title: 'AI Generated Plan',
+        title: plan?.title ?? 'AI Generated Plan',
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined, color: Colors.white54),
@@ -56,9 +60,9 @@ class AiPlanDetailsScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.goldDim,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.gold.withOpacity(0.3)),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
             ),
-            child: Row(children: const [
+            child: const Row(children: [
               Icon(Icons.auto_awesome, color: AppColors.gold, size: 18),
               SizedBox(width: 10),
               Expanded(
@@ -104,23 +108,23 @@ class AiPlanDetailsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('3-Day Cairo Adventure',
-                      style: TextStyle(
+                  Text(plan?.title ?? '3-Day Cairo Adventure',
+                      style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
-                  Row(children: const [
-                    Icon(Icons.calendar_today_outlined,
+                  Row(children: [
+                    const Icon(Icons.calendar_today_outlined,
                         color: Colors.white60, size: 14),
-                    SizedBox(width: 5),
-                    Text('3 Days · 2 Nights',
-                        style: TextStyle(color: Colors.white60, fontSize: 12)),
-                    SizedBox(width: 14),
-                    Icon(Icons.attach_money,
+                    const SizedBox(width: 5),
+                    Text('${plan?.items.length ?? 0} Stops',
+                        style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    const SizedBox(width: 14),
+                    const Icon(Icons.attach_money,
                         color: Colors.white60, size: 14),
-                    SizedBox(width: 5),
-                    Text('Est. \$280 / person',
+                    const SizedBox(width: 5),
+                    const Text('Personalized',
                         style: TextStyle(color: Colors.white60, fontSize: 12)),
                   ]),
                 ],
@@ -131,7 +135,10 @@ class AiPlanDetailsScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // ─── Days ──────────────────────────────
-          ..._days.map((day) => _buildDay(day, context)),
+          if (plan != null)
+            ..._groupItemsByDay(plan.items).entries.map((e) => _buildRealDay(e.key, e.value, context))
+          else
+            ..._days.map((day) => _buildDay(day, context)),
         ]),
       ),
 
@@ -168,6 +175,88 @@ class AiPlanDetailsScreen extends StatelessWidget {
           ),
         ]),
       ),
+    );
+  }
+
+  Map<int, List<PlanItemModel>> _groupItemsByDay(List<PlanItemModel> items) {
+    final groups = <int, List<PlanItemModel>>{};
+    for (var item in items) {
+      groups.putIfAbsent(item.dayIndex, () => []).add(item);
+    }
+    return groups;
+  }
+
+  Widget _buildRealDay(int dayIdx, List<PlanItemModel> items, BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.gold,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text('Day ${dayIdx + 1}',
+                style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13)),
+          ),
+        ]),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.bgCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white10),
+          ),
+          child: Column(
+            children: items.asMap().entries.map((e) {
+              final isLast = e.key == items.length - 1;
+              final place = e.value.place;
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(children: [
+                    Container(
+                      width: 36, height: 36,
+                      decoration: const BoxDecoration(
+                          color: AppColors.goldDim,
+                          shape: BoxShape.circle),
+                      child: const Icon(Icons.place, color: AppColors.gold, size: 16),
+                    ),
+                    if (!isLast)
+                      Container(width: 1, height: 36, color: Colors.white12),
+                  ]),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(place?.title ?? 'Visit Place',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13)),
+                          const SizedBox(height: 2),
+                          Text(place?.displayPrice ?? '',
+                              style: const TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ]),
     );
   }
 

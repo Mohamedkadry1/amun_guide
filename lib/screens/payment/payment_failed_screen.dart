@@ -24,7 +24,7 @@ class PaymentFailedScreen extends StatelessWidget {
               Container(
                 width: 110, height: 110,
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.red, width: 3),
                 ),

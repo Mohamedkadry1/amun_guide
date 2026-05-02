@@ -96,10 +96,10 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.blueAccent.withOpacity(0.12),
+                      color: Colors.blueAccent.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: Colors.blueAccent.withOpacity(0.3)),
+                          color: Colors.blueAccent.withValues(alpha: 0.3)),
                     ),
                     child: const Text('Tips',
                         style: TextStyle(
