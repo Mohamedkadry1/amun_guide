@@ -1,9 +1,27 @@
 // 📁 lib/main.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 // Core
 import 'core/constants/app_colors.dart';
+
+// Providers
+import 'providers/auth_provider.dart';
+import 'providers/place_provider.dart';
+import 'providers/tour_provider.dart';
+import 'providers/booking_provider.dart';
+import 'providers/conversation_provider.dart';
+import 'providers/plan_provider.dart';
+import 'providers/payment_provider.dart';
+import 'providers/notification_provider.dart';
+import 'providers/admin_provider.dart';
+
+
+
+
+
+
 
 // Auth
 import 'screens/auth/splash_screen.dart';
@@ -54,6 +72,26 @@ void main() => runApp(const AmunGuideApp());
 class AmunGuideApp extends StatelessWidget {
   const AmunGuideApp({super.key});
 
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => PlaceProvider()),
+        ChangeNotifierProvider(create: (_) => TourProvider()),
+        ChangeNotifierProvider(create: (_) => BookingProvider()),
+        ChangeNotifierProvider(create: (_) => ConversationProvider()),
+        ChangeNotifierProvider(create: (_) => PlanProvider()),
+        ChangeNotifierProvider(create: (_) => PaymentProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => AdminProvider()),
+      ],
+      child: _AppMaterial(),
+    );
+  }
+}
+
+class _AppMaterial extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
