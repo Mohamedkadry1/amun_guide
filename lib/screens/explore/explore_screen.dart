@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_assets.dart';
+import '../../core/services/places_service.dart';
 import '../../core/widgets/amun_filter_chip.dart';
 import '../../core/widgets/place_card.dart';
 import '../../core/widgets/section_header.dart';
@@ -17,20 +18,73 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen> {
   int _activeFilter = 0;
   bool _isGrid = true;
+  bool _isLoading = true;
   final _searchController = TextEditingController();
+  final _placesService = PlacesService();
 
   final _filters = ['All', 'Temples', 'Deserts', 'Nile', 'Beaches', 'Museums'];
 
-  final _places = [
-    {'img': AppAssets.pyramids,   'name': 'Giza Pyramids',   'loc': 'Cairo, Egypt',      'rating': '4.9', 'price': '\$150/pax', 'cat': 'Temples'},
-    {'img': AppAssets.karnak,     'name': 'Karnak Temple',   'loc': 'Luxor, Egypt',      'rating': '4.8', 'price': '\$250/pax', 'cat': 'Temples'},
-    {'img': AppAssets.abuSimbel,  'name': 'Abu Simbel',      'loc': 'Aswan, Egypt',      'rating': '4.8', 'price': '\$200/pax', 'cat': 'Temples'},
-    {'img': AppAssets.siwa,       'name': 'Siwa Oasis',      'loc': 'Siwa, Egypt',       'rating': '4.7', 'price': '\$180/pax', 'cat': 'Deserts'},
-    {'img': AppAssets.nileSunset, 'name': 'Nile Cruise',     'loc': 'Luxor → Aswan',    'rating': '4.9', 'price': '\$350/pax', 'cat': 'Nile'},
-    {'img': AppAssets.alexandria, 'name': 'Alexandria',      'loc': 'Alexandria, Egypt', 'rating': '4.6', 'price': '\$120/pax', 'cat': 'Beaches'},
-    {'img': AppAssets.museum,     'name': 'Egyptian Museum', 'loc': 'Cairo, Egypt',      'rating': '4.7', 'price': '\$80/pax',  'cat': 'Museums'},
-    {'img': AppAssets.valley,     'name': 'Valley of Kings', 'loc': 'Luxor, Egypt',      'rating': '4.8', 'price': '\$160/pax', 'cat': 'Temples'},
-  ];
+  List<Map<String, dynamic>> _places = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlaces();
+  }
+
+  Future<void> _loadPlaces() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _placesService.getAllPlaces();
+      final data = response.data;
+      final List items = data['data'] ?? data ?? [];
+      setState(() {
+        _places = items.map<Map<String, dynamic>>((p) => {
+          'id': p['id'],
+          'img': p['image'] ?? p['image_url'] ?? '',
+          'name': p['title'] ?? p['name'] ?? '',
+          'loc': p['location'] ?? 'Egypt',
+          'rating': (p['rating'] ?? 0).toString(),
+          'price': '\$${p['ticket_price'] ?? 0}/pax',
+          'cat': p['category'] ?? 'Temples',
+          'description': p['description'] ?? '',
+        }).toList();
+      });
+    } catch (e) {
+      debugPrint('Error loading places: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _searchPlaces(String query) async {
+    if (query.isEmpty) {
+      _loadPlaces();
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      final response = await _placesService.searchPlaces(query);
+      final data = response.data;
+      final List items = data['data'] ?? data ?? [];
+      setState(() {
+        _places = items.map<Map<String, dynamic>>((p) => {
+          'id': p['id'],
+          'img': p['image'] ?? p['image_url'] ?? '',
+          'name': p['title'] ?? p['name'] ?? '',
+          'loc': p['location'] ?? 'Egypt',
+          'rating': (p['rating'] ?? 0).toString(),
+          'price': '\$${p['ticket_price'] ?? 0}/pax',
+          'cat': p['category'] ?? 'Temples',
+          'description': p['description'] ?? '',
+        }).toList();
+      });
+    } catch (e) {
+      debugPrint('Error searching: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   List<Map<String, dynamic>> get _filtered => _activeFilter == 0
       ? _places
@@ -54,7 +108,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold)),
-                // Grid / List toggle
                 Container(
                   decoration: BoxDecoration(
                     color: AppColors.bgCard,
@@ -85,6 +138,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     child: TextField(
                       controller: _searchController,
                       style: const TextStyle(color: Colors.white, fontSize: 14),
+                      onSubmitted: _searchPlaces,
+                      onChanged: (v) {
+                        if (v.isEmpty) _loadPlaces();
+                      },
                       decoration: const InputDecoration(
                         hintText: 'Search places, tours...',
                         hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
@@ -94,13 +151,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold,
-                      borderRadius: BorderRadius.circular(8),
+                  GestureDetector(
+                    onTap: () => _searchPlaces(_searchController.text),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.tune, color: Colors.black, size: 16),
                     ),
-                    child: const Icon(Icons.tune, color: Colors.black, size: 16),
                   ),
                 ]),
               ),
@@ -129,44 +189,58 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
           // ─── Results ────────────────────────────
           Expanded(
-            child: _isGrid
-                ? GridView.builder(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.78,
-              ),
-              itemCount: _filtered.length,
-              itemBuilder: (_, i) => PlaceCard(
-                image: _filtered[i]['img'],
-                name: _filtered[i]['name'],
-                location: _filtered[i]['loc'],
-                rating: _filtered[i]['rating'],
-                price: _filtered[i]['price'],
-                category: _filtered[i]['cat'],
-                style: PlaceCardStyle.grid,
-                onTap: () => Navigator.pushNamed(context, '/place-details'),
-                onSave: () {},
-              ),
-            )
-                : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              itemCount: _filtered.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (_, i) => PlaceCard(
-                image: _filtered[i]['img'],
-                name: _filtered[i]['name'],
-                location: _filtered[i]['loc'],
-                rating: _filtered[i]['rating'],
-                price: _filtered[i]['price'],
-                category: _filtered[i]['cat'],
-                style: PlaceCardStyle.list,
-                onTap: () => Navigator.pushNamed(context, '/place-details'),
-                onSave: () {},
-              ),
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+                : _filtered.isEmpty
+                    ? const Center(child: Text('No places found', style: TextStyle(color: Colors.white38)))
+                    : _isGrid
+                        ? GridView.builder(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 14,
+                              mainAxisSpacing: 14,
+                              childAspectRatio: 0.78,
+                            ),
+                            itemCount: _filtered.length,
+                            itemBuilder: (_, i) => PlaceCard(
+                              image: _filtered[i]['img'] ?? '',
+                              name: _filtered[i]['name'] ?? '',
+                              location: _filtered[i]['loc'] ?? '',
+                              rating: _filtered[i]['rating'] ?? '',
+                              price: _filtered[i]['price'] ?? '',
+                              category: _filtered[i]['cat'] ?? '',
+                              style: PlaceCardStyle.grid,
+                              isNetworkImage: true,
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/place-details',
+                                arguments: _filtered[i],
+                              ),
+                              onSave: () {},
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                            itemCount: _filtered.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 12),
+                            itemBuilder: (_, i) => PlaceCard(
+                              image: _filtered[i]['img'] ?? '',
+                              name: _filtered[i]['name'] ?? '',
+                              location: _filtered[i]['loc'] ?? '',
+                              rating: _filtered[i]['rating'] ?? '',
+                              price: _filtered[i]['price'] ?? '',
+                              category: _filtered[i]['cat'] ?? '',
+                              style: PlaceCardStyle.list,
+                              isNetworkImage: true,
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/place-details',
+                                arguments: _filtered[i],
+                              ),
+                              onSave: () {},
+                            ),
+                          ),
           ),
         ]),
       ),

@@ -17,6 +17,7 @@ import 'screens/auth/reset_password_screen.dart';
 
 // Tourist
 import 'screens/tourist/main_navigation.dart';
+import 'screens/tourist/profile_screen.dart';
 import 'screens/tourist/notifications_screen.dart';
 import 'screens/tourist/edit_profile_screen.dart';
 import 'screens/tourist/saved_places_screen.dart';
@@ -85,7 +86,7 @@ class AmunGuideApp extends StatelessWidget {
         '/login':           (ctx) => const LoginScreen(),
         '/register':        (ctx) => const RegisterScreen(),
         '/forgot-password': (ctx) => ForgotPasswordScreen(),
-        '/reset-password':  (ctx) => ResetPasswordScreen(),
+        '/reset-password':  (ctx) => const ResetPasswordScreen(),
 
         // ══════════════════════════════════════
         // MAIN APP
@@ -96,6 +97,7 @@ class AmunGuideApp extends StatelessWidget {
         // TOURIST
         // ══════════════════════════════════════
         '/notifications':   (ctx) => const NotificationsScreen(),
+        '/profile':          (ctx) => const ProfileScreen(),
         '/edit-profile':    (ctx) => const EditProfileScreen(),
         '/saved-places':    (ctx) => const SavedPlacesScreen(),
 

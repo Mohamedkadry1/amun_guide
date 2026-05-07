@@ -13,6 +13,7 @@ class PlaceCard extends StatelessWidget {
   final String price;
   final String? category;
   final bool isSaved;
+  final bool isNetworkImage;
   final PlaceCardStyle style;
   final VoidCallback onTap;
   final VoidCallback? onSave;
@@ -26,6 +27,7 @@ class PlaceCard extends StatelessWidget {
     required this.price,
     this.category,
     this.isSaved = false,
+    this.isNetworkImage = false,
     this.style = PlaceCardStyle.grid,
     required this.onTap,
     this.onSave,
@@ -57,11 +59,17 @@ class PlaceCard extends StatelessWidget {
                 const BorderRadius.vertical(top: Radius.circular(16)),
                 child: SizedBox(
                   height: 120, width: double.infinity,
-                  child: Image.asset(image, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                          color: AppColors.bgInput,
-                          child: const Icon(Icons.image,
-                              color: Colors.white24, size: 40))),
+                  child: isNetworkImage && image.startsWith('http')
+                      ? Image.network(image, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                              color: AppColors.bgInput,
+                              child: const Icon(Icons.image,
+                                  color: Colors.white24, size: 40)))
+                      : Image.asset(image, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                              color: AppColors.bgInput,
+                              child: const Icon(Icons.image,
+                                  color: Colors.white24, size: 40))),
                 ),
               ),
               // Save button
@@ -163,11 +171,17 @@ class PlaceCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: SizedBox(
               width: 90, height: 90,
-              child: Image.asset(image, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                      color: AppColors.bgInput,
-                      child: const Icon(Icons.image,
-                          color: Colors.white24, size: 32))),
+              child: isNetworkImage && image.startsWith('http')
+                  ? Image.network(image, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                          color: AppColors.bgInput,
+                          child: const Icon(Icons.image,
+                              color: Colors.white24, size: 32)))
+                  : Image.asset(image, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                          color: AppColors.bgInput,
+                          child: const Icon(Icons.image,
+                              color: Colors.white24, size: 32))),
             ),
           ),
           const SizedBox(width: 12),
