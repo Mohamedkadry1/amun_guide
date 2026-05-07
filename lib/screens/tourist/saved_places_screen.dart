@@ -154,6 +154,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
             ),
             itemCount: _saved.length,
             itemBuilder: (_, i) => PlaceCard(
+              id: _saved[i]['id'] is int ? _saved[i]['id'] : int.tryParse(_saved[i]['id']?.toString() ?? ''),
               image: _saved[i]['img'],
               name: _saved[i]['name'],
               location: _saved[i]['loc'],
@@ -168,7 +169,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                 arguments: _saved[i],
               ),
               onSave: () async {
-                // Optional: make API call to unsave here.
+                // Optimistic removal happens within PlaceCard, but we want to remove it from the list
                 setState(() => _saved.removeAt(i));
               },
             ),

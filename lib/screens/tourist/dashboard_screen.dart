@@ -168,7 +168,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 _buildCategories(context),
                 const SizedBox(height: 28),
-
                 SectionHeader(
                   title: 'Popular Tours',
                   actionLabel: 'See all',
@@ -177,14 +176,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 14),
                 _buildToursRow(context),
                 const SizedBox(height: 28),
-
                 SectionHeader(
                   title: 'Trending Places',
                   actionLabel: 'See all',
                   onAction: widget.onExplore,
                 ),
                 const SizedBox(height: 14),
-
                 if (_isLoadingPlaces)
                   const Center(
                     child: CircularProgressIndicator(color: AppColors.gold),

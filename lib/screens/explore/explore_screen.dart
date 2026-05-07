@@ -204,6 +204,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             ),
                             itemCount: _filtered.length,
                             itemBuilder: (_, i) => PlaceCard(
+                              id: _filtered[i]['id'] is int ? _filtered[i]['id'] : int.tryParse(_filtered[i]['id']?.toString() ?? ''),
                               image: _filtered[i]['img'] ?? '',
                               name: _filtered[i]['name'] ?? '',
                               location: _filtered[i]['loc'] ?? '',
@@ -217,7 +218,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                 '/place-details',
                                 arguments: _filtered[i],
                               ),
-                              onSave: () {},
                             ),
                           )
                         : ListView.separated(
@@ -225,6 +225,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             itemCount: _filtered.length,
                             separatorBuilder: (_, __) => const SizedBox(height: 12),
                             itemBuilder: (_, i) => PlaceCard(
+                              id: _filtered[i]['id'] is int ? _filtered[i]['id'] : int.tryParse(_filtered[i]['id']?.toString() ?? ''),
                               image: _filtered[i]['img'] ?? '',
                               name: _filtered[i]['name'] ?? '',
                               location: _filtered[i]['loc'] ?? '',
@@ -238,7 +239,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                 '/place-details',
                                 arguments: _filtered[i],
                               ),
-                              onSave: () {},
                             ),
                           ),
           ),
