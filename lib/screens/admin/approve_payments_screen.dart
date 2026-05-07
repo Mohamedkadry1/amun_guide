@@ -21,28 +21,7 @@ class _ApprovePaymentsScreenState extends State<ApprovePaymentsScreen> {
   final _paymentService = PaymentService();
   bool _isLoading = true;
 
-  List<Map<String, dynamic>> _payments = [
-    {
-      'id': 'TRX-88392', 'user': 'Sarah Ahmed', 'avatar': AppAssets.sarah,
-      'tour': 'Luxor & Aswan Adventure', 'amount': '\$450.00',
-      'date': '12 Oct 2024', 'image': AppAssets.receipt1, 'status': 'Pending',
-    },
-    {
-      'id': 'TRX-88391', 'user': 'David Miller', 'avatar': AppAssets.david,
-      'tour': 'Giza Pyramids Day Tour', 'amount': '\$150.00',
-      'date': '11 Oct 2024', 'image': AppAssets.receipt2, 'status': 'Pending',
-    },
-    {
-      'id': 'TRX-77281', 'user': 'Anna K.', 'avatar': AppAssets.anna,
-      'tour': 'Nile Cruise 3 Days', 'amount': '\$350.00',
-      'date': '05 Oct 2024', 'image': AppAssets.receipt3, 'status': 'Approved',
-    },
-    {
-      'id': 'TRX-66170', 'user': 'Marcus L.', 'avatar': AppAssets.marcus,
-      'tour': 'Siwa Oasis Adventure', 'amount': '\$280.00',
-      'date': '28 Sep 2024', 'image': AppAssets.receipt4, 'status': 'Rejected',
-    },
-  ];
+  List<Map<String, dynamic>> _payments = [];
 
   List<Map<String, dynamic>> get _filtered {
     if (_activeFilter == 1) return _payments;
