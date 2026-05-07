@@ -5,6 +5,8 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/services/dio_client.dart';
 import '../../core/services/tours_service.dart';
+import '../../core/services/places_service.dart';
+import '../../core/services/tour_booking_service.dart';
 import '../../core/widgets/tour_card.dart';
 import '../../core/widgets/hotel_card.dart';
 import '../../core/widgets/section_header.dart';
@@ -20,15 +22,28 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   String _userName = 'Explorer';
   String _userImage = '';
+  int _points = 0;
+
   List<Map<String, dynamic>> _tours = [];
   bool _isLoadingTours = true;
+
+  List<Map<String, dynamic>> _places = [];
+  bool _isLoadingPlaces = true;
+
+  Map<String, dynamic>? _upcomingTrip;
+  bool _isLoadingTrip = true;
+
   final _toursService = ToursService();
+  final _placesService = PlacesService();
+  final _bookingService = TourBookingService();
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _loadTours();
+    _loadPlaces();
+    _loadUpcomingTrip();
   }
 
   Future<void> _loadUserData() async {
@@ -37,6 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         _userName = data['name']?.toString().split(' ').first ?? 'Explorer';
         _userImage = data['profile_image'] ?? '';
+        _points = data['points'] ?? 0;
       });
     }
   }
@@ -71,6 +87,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Future<void> _loadPlaces() async {
+    try {
+      final response = await _placesService.getTrendingPlaces();
+      final data = response.data;
+      final List items = data['data'] ?? data ?? [];
+      if (mounted) {
+        setState(() {
+          _places = items
+              .take(3)
+              .map<Map<String, dynamic>>(
+                (p) => {
+                  'id': p['id'],
+                  'img': p['image'] ?? p['image_url'] ?? '',
+                  'name': p['title'] ?? p['name'] ?? '',
+                  'loc': p['location'] ?? '',
+                  'rating': (p['rating'] ?? 0).toString(),
+                  'price': '\$${p['ticket_price'] ?? 0}',
+                },
+              )
+              .toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading places: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingPlaces = false);
+    }
+  }
+
+  Future<void> _loadUpcomingTrip() async {
+    try {
+      final response = await _bookingService.getMyBookings();
+      final data = response.data;
+      final List items = data['data'] ?? data ?? [];
+
+      // Find the first upcoming/pending/approved booking
+      final upcoming = items.firstWhere(
+        (b) => b['status'] != 'rejected' && b['status'] != 'cancelled',
+        orElse: () => null,
+      );
+
+      if (upcoming != null) {
+        final tour = upcoming['tour'] ?? {};
+        if (mounted) {
+          setState(() {
+            _upcomingTrip = {
+              'id': upcoming['id'],
+              'date':
+                  upcoming['booking_date'] ??
+                  upcoming['created_at']?.split('T').first ??
+                  'Upcoming',
+              'tour_name': tour['title'] ?? tour['name'] ?? 'Tour',
+              'status': upcoming['status'] ?? 'pending',
+            };
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading upcoming trip: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingTrip = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -84,9 +164,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               delegate: SliverChildListDelegate([
                 const SizedBox(height: 20),
                 _buildUpcomingTrip(),
-                const SizedBox(height: 28),
+                if (_upcomingTrip != null) const SizedBox(height: 28),
+
                 _buildCategories(context),
                 const SizedBox(height: 28),
+
                 SectionHeader(
                   title: 'Popular Tours',
                   actionLabel: 'See all',
@@ -95,29 +177,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 14),
                 _buildToursRow(context),
                 const SizedBox(height: 28),
+
                 SectionHeader(
-                  title: 'Hotels for you',
+                  title: 'Trending Places',
                   actionLabel: 'See all',
                   onAction: widget.onExplore,
                 ),
                 const SizedBox(height: 14),
-                HotelCard(
-                  image: AppAssets.hotel1,
-                  name: 'Marriott Mena House',
-                  location: 'Giza, Egypt',
-                  stars: 5,
-                  price: '\$320/night',
-                  onTap: () => Navigator.pushNamed(context, '/place-details'),
-                ),
-                const SizedBox(height: 12),
-                HotelCard(
-                  image: AppAssets.hotel2,
-                  name: 'Winter Palace Luxor',
-                  location: 'Luxor, Egypt',
-                  stars: 5,
-                  price: '\$280/night',
-                  onTap: () => Navigator.pushNamed(context, '/place-details'),
-                ),
+
+                if (_isLoadingPlaces)
+                  const Center(
+                    child: CircularProgressIndicator(color: AppColors.gold),
+                  )
+                else if (_places.isEmpty)
+                  const Text(
+                    'No trending places found.',
+                    style: TextStyle(color: Colors.white54),
+                  )
+                else
+                  ..._places.map(
+                    (place) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: HotelCard(
+                        image: place['img'] ?? '',
+                        name: place['name'] ?? '',
+                        location: place['loc'] ?? '',
+                        stars:
+                            double.tryParse(place['rating'] ?? '0')?.toInt() ??
+                            5,
+                        price: place['price'] ?? '',
+                        onTap: () => Navigator.pushNamed(
+                          context,
+                          '/place-details',
+                          arguments: place,
+                        ),
+                      ),
+                    ),
+                  ),
               ]),
             ),
           ),
@@ -149,17 +245,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: const [
-                      Icon(Icons.stars, color: AppColors.gold, size: 14),
-                      SizedBox(width: 4),
-                      Text(
-                        '2,000 points',
-                        style: TextStyle(color: AppColors.gold, fontSize: 13),
-                      ),
-                    ],
-                  ),
+                  if (_points > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.stars,
+                          color: AppColors.gold,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$_points points',
+                          style: const TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
               GestureDetector(
@@ -219,6 +324,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildUpcomingTrip() {
+    if (_isLoadingTrip) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.gold),
+      );
+    }
+    if (_upcomingTrip == null) {
+      return const SizedBox.shrink(); // Hide if no upcoming trips
+    }
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -239,9 +353,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: AppColors.gold,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'Upcoming',
-                  style: TextStyle(
+                child: Text(
+                  (_upcomingTrip!['status'] as String).toUpperCase(),
+                  style: const TextStyle(
                     color: Colors.black,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -249,9 +363,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              const Text(
-                '12 October 2024',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
+              Text(
+                _upcomingTrip!['date'] ?? '',
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
             ],
           ),
@@ -259,43 +373,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _flightPoint('CAI', '08:00'),
               Expanded(
-                child: Column(
-                  children: [
-                    const Text(
-                      '3h 30m',
-                      style: TextStyle(color: Colors.white38, fontSize: 11),
-                    ),
-                    const SizedBox(height: 6),
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        const Divider(color: Colors.white12),
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: const BoxDecoration(
-                            color: AppColors.gold,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.flight,
-                            color: Colors.black,
-                            size: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Nonstop',
-                      style: TextStyle(color: Colors.white38, fontSize: 11),
-                    ),
-                  ],
+                child: Text(
+                  _upcomingTrip!['tour_name'] ?? '',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              _flightPoint('LXR', '11:30'),
             ],
           ),
           const SizedBox(height: 14),
@@ -303,14 +390,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
+            children: [
+              const Text(
                 'Booking ID',
                 style: TextStyle(color: Colors.white38, fontSize: 12),
               ),
               Text(
-                'AMG-7832',
-                style: TextStyle(
+                'AMG-${_upcomingTrip!['id']}',
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
@@ -322,20 +409,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
-  Widget _flightPoint(String code, String time) => Column(
-    children: [
-      Text(
-        code,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      Text(time, style: const TextStyle(color: Colors.white38, fontSize: 12)),
-    ],
-  );
 
   Widget _buildCategories(BuildContext context) {
     final cats = [
@@ -402,53 +475,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    // Use API data if available, otherwise fallback to static data
-    final tours = _tours.isNotEmpty
-        ? _tours
-        : [
-            {
-              'img': AppAssets.pyramids,
-              'name': 'Giza Pyramids',
-              'loc': 'Cairo',
-              'rating': '4.9',
-              'price': '\$150/pax',
-              'tag': '1D',
-            },
-            {
-              'img': AppAssets.karnak,
-              'name': 'Karnak Temple',
-              'loc': 'Luxor',
-              'rating': '4.8',
-              'price': '\$250/pax',
-              'tag': '3D2N',
-            },
-            {
-              'img': AppAssets.abuSimbel,
-              'name': 'Abu Simbel',
-              'loc': 'Aswan',
-              'rating': '4.8',
-              'price': '\$200/pax',
-              'tag': '2D1N',
-            },
-          ];
+    if (_tours.isEmpty) {
+      return const SizedBox(
+        height: 210,
+        child: Center(
+          child: Text(
+            'No popular tours found.',
+            style: TextStyle(color: Colors.white54),
+          ),
+        ),
+      );
+    }
 
     return SizedBox(
       height: 210,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: tours.length,
+        itemCount: _tours.length,
         separatorBuilder: (_, __) => const SizedBox(width: 14),
         itemBuilder: (_, i) => TourCard(
-          image: tours[i]['img']?.toString() ?? '',
-          name: tours[i]['name']?.toString() ?? '',
-          location: tours[i]['loc']?.toString() ?? '',
-          rating: tours[i]['rating']?.toString() ?? '',
-          price: tours[i]['price']?.toString() ?? '',
-          tag: tours[i]['tag']?.toString() ?? '',
+          image: _tours[i]['img']?.toString() ?? '',
+          name: _tours[i]['name']?.toString() ?? '',
+          location: _tours[i]['loc']?.toString() ?? '',
+          rating: _tours[i]['rating']?.toString() ?? '',
+          price: _tours[i]['price']?.toString() ?? '',
+          tag: _tours[i]['tag']?.toString() ?? '',
           onTap: () => Navigator.pushNamed(
             context,
             '/tour-details',
-            arguments: tours[i],
+            arguments: _tours[i],
           ),
         ),
       ),
