@@ -17,36 +17,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
   int _likes = 48;
   final _commentController = TextEditingController();
 
-  final _comments = [
-    _Comment(
-      avatar: AppAssets.david,
-      name: 'David Miller',
-      time: '1h ago',
-      text: 'This is exactly what I needed to know! Going next week.',
-      likes: 8,
-    ),
-    _Comment(
-      avatar: AppAssets.elena,
-      name: 'Elena Rossi',
-      time: '2h ago',
-      text: 'The lighting at sunrise is just unreal. Great tip Anna!',
-      likes: 5,
-    ),
-    _Comment(
-      avatar: AppAssets.marcus,
-      name: 'Marcus L.',
-      time: '3h ago',
-      text: 'Confirmed — got there at 6:15 AM last month. Had the whole place to myself for 20 minutes. Magical.',
-      likes: 12,
-    ),
-    _Comment(
-      avatar: AppAssets.sarah,
-      name: 'Sarah Ahmed',
-      time: '4h ago',
-      text: 'Does this work for Luxor Temple too? Or just Karnak?',
-      likes: 3,
-    ),
-  ];
+  final List<_Comment> _comments = [];
 
   @override
   Widget build(BuildContext context) {

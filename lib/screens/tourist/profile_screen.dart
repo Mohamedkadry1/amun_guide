@@ -20,6 +20,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _phone = '';
   String _country = '';
   String _profileImage = '';
+  int _trips = 0;
+  int _reviews = 0;
+  int _points = 0;
   final _authService = AuthService();
 
   @override
@@ -37,6 +40,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _phone = data['phone'] ?? '';
         _country = data['address'] ?? 'Egypt';
         _profileImage = data['profile_image'] ?? '';
+        _trips = data['trips_count'] ?? data['trips'] ?? 0;
+        _reviews = data['reviews_count'] ?? data['reviews'] ?? 0;
+        _points = data['points'] ?? 0;
       });
     }
   }
@@ -128,11 +134,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _statItem('12', 'Trips'),
+                _statItem('$_trips', 'Trips'),
                 _divider(),
-                _statItem('45', 'Reviews'),
+                _statItem('$_reviews', 'Reviews'),
                 _divider(),
-                _statItem('840', 'Points'),
+                _statItem('$_points', 'Points'),
               ],
             ),
           ),
